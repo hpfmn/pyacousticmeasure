@@ -1,0 +1,15 @@
+eva
+	- make custom adjust dialogs for plots
+	- add more plots
+mes
+	- save file
+	- MLS/Golay signal Generator
+	- ImpulseResponse Generator (FFT division or XCorr)
+
+calib
+	- add functionality to convolute files with generated Impulse Responses
+		- based on manuel selection and some kind of regex filenames
+
+overall:
+	- make GUI look nice
+
