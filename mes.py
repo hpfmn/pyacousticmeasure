@@ -9,7 +9,13 @@ import scipy
 import scipy.signal
 import wave
 import os
-jack.attach('measure')
+
+jack_running=True
+try:
+	jack.attach('measure')
+except Exception as e:
+	print(e)
+	jack_running=False
 
 p = pyaudio.PyAudio()
 
@@ -88,31 +94,31 @@ class MES_GUI:
 		self.ausenb.grid(row=0, column=0)
 
 		# LabelFrame for PyJack Setup 
-		self.pyjaseframe = ttk.LabelFrame(self.myParent, text='PyJack Setup') 
-		self.pyjaseframe.grid(row=0,column=0) 
-		self.jainplabel = ttk.Label(self.pyjaseframe, text='Jack Inputs auswählen:') 
-		self.jainplabel.grid(row=1, column=0) 
-		self.jaoutplabel = ttk.Label(self.pyjaseframe, text='Jack Outputs auswählen:')
-		self.jaoutplabel.grid(row=3, column=0)
+		if jack_running:
+			self.pyjaseframe = ttk.LabelFrame(self.myParent, text='PyJack Setup') 
+			self.pyjaseframe.grid(row=0,column=0) 
+			self.jainplabel = ttk.Label(self.pyjaseframe, text='Jack Inputs auswählen:') 
+			self.jainplabel.grid(row=1, column=0) 
+			self.jaoutplabel = ttk.Label(self.pyjaseframe, text='Jack Outputs auswählen:')
+			self.jaoutplabel.grid(row=3, column=0)
 
-		self.jainplist = tkinter.Listbox(self.pyjaseframe, height=5, selectmode=tkinter.MULTIPLE, exportselection=0)
-		self.jainplist.grid(row=2, column=0, sticky=(tkinter.W, tkinter.E, tkinter.N, tkinter.S))
-		self.jainpscroll = ttk.Scrollbar(self.pyjaseframe, orient=tkinter.VERTICAL, command=self.jainplist.yview)
-		self.jainpscroll.grid(row=2, column=1, sticky=(tkinter.N,tkinter.S))
-		self.jainplist['yscrollcommand'] = self.jainpscroll.set
+			self.jainplist = tkinter.Listbox(self.pyjaseframe, height=5, selectmode=tkinter.MULTIPLE, exportselection=0)
+			self.jainplist.grid(row=2, column=0, sticky=(tkinter.W, tkinter.E, tkinter.N, tkinter.S))
+			self.jainpscroll = ttk.Scrollbar(self.pyjaseframe, orient=tkinter.VERTICAL, command=self.jainplist.yview)
+			self.jainpscroll.grid(row=2, column=1, sticky=(tkinter.N,tkinter.S))
+			self.jainplist['yscrollcommand'] = self.jainpscroll.set
 
-		self.jaoutlist = tkinter.Listbox(self.pyjaseframe, height=5, selectmode=tkinter.MULTIPLE, exportselection=0)
-		self.jaoutlist.grid(row=4, column=0, sticky=(tkinter.W, tkinter.E))
-		self.jaoutscroll = ttk.Scrollbar(self.pyjaseframe, orient=tkinter.VERTICAL, command=self.jaoutlist.yview)
-		self.jaoutscroll.grid(row=4, column=1, sticky=(tkinter.N,tkinter.S))
-		self.jaoutlist['yscrollcommand'] = self.jaoutscroll.set
+			self.jaoutlist = tkinter.Listbox(self.pyjaseframe, height=5, selectmode=tkinter.MULTIPLE, exportselection=0)
+			self.jaoutlist.grid(row=4, column=0, sticky=(tkinter.W, tkinter.E))
+			self.jaoutscroll = ttk.Scrollbar(self.pyjaseframe, orient=tkinter.VERTICAL, command=self.jaoutlist.yview)
+			self.jaoutscroll.grid(row=4, column=1, sticky=(tkinter.N,tkinter.S))
+			self.jaoutlist['yscrollcommand'] = self.jaoutscroll.set
 
-		self.jarefbtn = ttk.Button(self.pyjaseframe, text='Aktualisieren', command=self.get_jack_ports)
-		self.jarefbtn.grid(row=5,column=0) 
-		
-		self.get_jack_ports()
-		
-		self.ausenb.add(self.pyjaseframe, text='PyJack', underline=0, padding=2)
+			self.jarefbtn = ttk.Button(self.pyjaseframe, text='Aktualisieren', command=self.get_jack_ports)
+			self.jarefbtn.grid(row=5,column=0) 
+			
+			self.get_jack_ports()
+			self.ausenb.add(self.pyjaseframe, text='PyJack', underline=0, padding=2)
 		self.ausenb.bind('<<NotebookTabChanged>>', self.tabchange)
 
 
@@ -495,4 +501,5 @@ root = tkinter.Tk()
 mes_gui = MES_GUI(root)
 root.mainloop()
 p.terminate()
-jack.detach()
+if jack_running:
+	jack.detach()
