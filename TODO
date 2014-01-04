@@ -1,5 +1,6 @@
 eva
 	- make custom adjust dialogs for plots
+		- wrote function to display dialogs (cfgdlg)
 	- add more plots
 mes
 	- save file
