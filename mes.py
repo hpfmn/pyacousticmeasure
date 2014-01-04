@@ -1,4 +1,5 @@
 import tkinter
+import tkinter.messagebox as messagebox
 import jack
 import time
 import tkinter.ttk as ttk
@@ -7,6 +8,7 @@ import pyaudio
 import numpy as np
 import scipy
 import scipy.signal
+import scipy.io.wavfile
 import wave
 import os
 
@@ -129,8 +131,8 @@ class MES_GUI:
 
 		self.siselabel = ttk.Label(self.siseframe, text='Signal')
 		self.siselabel.grid(row=1, column=0)
-		self.sisecb = ttk.Combobox(self.siseframe, values=('Sweep', 'Rauschen', 'Sinus', 'Rechteck', 'Sägezahn', 'SyncTest'), state='readonly')
-		self.generate_signal={'Sweep' : self.sweepgen, 'Rauschen': self.noisegen, 'Sinus': self.singen, 'Rechteck': self.squaregen, 'Sägezahn': self.sawtoothgen, 'SyncTest': self.synctest}
+		self.sisecb = ttk.Combobox(self.siseframe, values=('Sweep', 'Rauschen', 'Sinus', 'Rechteck', 'Sägezahn'), state='readonly')
+		self.generate_signal={'Sweep' : self.sweepgen, 'Rauschen': self.noisegen, 'Sinus': self.singen, 'Rechteck': self.squaregen, 'Sägezahn': self.sawtoothgen}
 		self.sisecb.current(newindex=0)
 		self.sisecb.bind('<<ComboboxSelected>>', self.signaltypechange)
 		self.sisecb.grid(row=1, column=1)
@@ -210,7 +212,7 @@ class MES_GUI:
 		self.prefixlabel=ttk.Label(self.fileframe, text="Prefix")
 		self.prefix=tkinter.StringVar()
 		self.prefixent = ttk.Entry(self.fileframe,textvariable=self.prefix)
-		self.prefix.set('Measure_')
+		self.prefix.set('Measure')
 		self.prefixlabel.grid(row=1,column=0)
 		self.prefixent.grid(row=1,column=1)
 
@@ -359,12 +361,35 @@ class MES_GUI:
 				self.TestPyJack()
 		
 	def mesButtonClick(self):
-		time.sleep(0.5)
-		for i in range(int(self.siavg.get())):
-			if(self.IsPyAudio()):
-				self.MesPyAudio()
-			if(self.IsPyJack()):
-				self.MesPyJack()
+		self.cursiavg=int(self.siavg.get())
+		filenotexists=True
+		if self.impcheck.get():
+			impfile=self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
+			if os.path.isfile(impfile):
+				messagebox.showerror('Datei existiert bereits', 'Die Datei '+impfile+' existiert Bereits!')
+				filenotexists=False
+		if self.rawcheck.get():
+			print('rawcheck')
+			for i in range(0,int(self.siavg.get())):
+				rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(i)+'.wav'
+				print('in loop')
+				if os.path.isfile(rawfile):
+					messagebox.showerror('Datei existiert bereits', 'Die Datei '+rawfile+' existiert Bereits!')
+					print('datei existiert')
+					filenotexists=False
+					break
+		if self.sigcheck.get():
+			sigfile=self.filepath.get()+os.sep+self.prefix.get()+'_SIG_'+self.counter.get()+'.wav'
+			if os.path.isfile(sigfile):
+				messagebox.showerror('Datei existiert bereits', 'Die Datei '+sigfile+' existiert Bereits!')
+				filenotexists=False
+		if filenotexists:
+			time.sleep(0.5)
+			for i in range(int(self.siavg.get())):
+				if(self.IsPyAudio()):
+					self.MesPyAudio()
+				if(self.IsPyJack()):
+					self.MesPyJack()
 	
 	def MesPyJack(self):
 		OCHANNELS=len(self.jaoutlist.curselection())
@@ -403,11 +428,17 @@ class MES_GUI:
 			jack.unregister_port('input_'+str(i))
 		jack.deactivate()
 
-		import scipy.io.wavfile
-		toSave = np.array(input.transpose(),dtype=('float32'))	
-		scipy.io.wavfile.write('measure_input.wav',int(Sr), toSave)
-		toSave = np.array(output.transpose(),dtype=('float32'))	
-		scipy.io.wavfile.write('measure_output.wav',int(Sr), toSave)
+		if self.rawcheck.get():
+			rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(self.cursiavg)+'.wav'
+			toSave = np.array(input.transpose(),dtype=('float32'))	
+			scipy.io.wavfile.write(rawfile,int(Sr), toSave)
+			print(rawfile+' saved')
+		self.cursiavg-=1
+
+		if (self.cursiavg==0) & (self.impcheck.get()):
+			self.generateIR()
+		#toSave = np.array(output.transpose(),dtype=('float32'))	
+		#scipy.io.wavfile.write('measure_output.wav',int(Sr), toSave)
 
 
 	def MesPyAudio(self):
@@ -452,12 +483,18 @@ class MES_GUI:
 		istream.stop_stream()
 		istream.close()
 
-		wf = wave.open('measure.wav', 'wb')
-		wf.setnchannels(ICHANNELS)
-		wf.setsampwidth(p.get_sample_size(FORMAT))
-		wf.setframerate(self.fs)
-		wf.writeframes(b''.join(self.record))
-		wf.close()
+		# If selected save raw data as Wavfile
+		if self.rawcheck.get():
+			rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(self.cursiavg)+'.wav'
+			wf = wave.open(rawfile, 'wb')
+			wf.setnchannels(ICHANNELS)
+			wf.setsampwidth(p.get_sample_size(FORMAT))
+			wf.setframerate(self.fs)
+			wf.writeframes(b''.join(self.record))
+			wf.close()
+		self.cursiavg-=1
+		if (self.cursiavg==0) & self.impcheck.get():
+			self.generateIR()
 
 	def get_plcb(self):
 		def plcb(in_data, frame_count, time_info, status):
@@ -488,14 +525,14 @@ class MES_GUI:
 		print('not implemented yet')
 	def sawtoothgen(self):
 		print('not implemented yet')
-	def synctest(self):
-		self.signal=np.concatenate((np.ones(100), np.zeros(100), -1*np.ones(100), np.zeros(50), np.ones(50)))
 	def selectpath(self):
 		filepath=filedialog.askdirectory()
 		print(filepath)
 		if filepath:
 			self.filepath.set(filepath)
-	#def measure(self, event):
+	def generateIR(self):
+		pass
+
 
 root = tkinter.Tk()
 mes_gui = MES_GUI(root)

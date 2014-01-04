@@ -4,6 +4,7 @@ eva
 	- add more plots
 mes
 	- save file
+		- basic file nameing implemented
 	- MLS/Golay signal Generator
 	- ImpulseResponse Generator (FFT division or XCorr)
 
