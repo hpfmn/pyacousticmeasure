@@ -29,6 +29,9 @@ hostapis=dict()
 for i in range(0,p.get_host_api_count()):
 	hostapis[p.get_host_api_info_by_index(i)['name']] = i
 
+def nextpow2(m):
+	return 2**np.ceil(np.log2(m))
+
 def listadev(hostapi, iotype):
 	"""Returns a dictionary containing name and index of all devices of a specific hostapi"""
 	adevs=dict()
@@ -51,7 +54,7 @@ class MES_GUI:
 		self.pyauseframe = ttk.LabelFrame(parent, text='Audiosetup PyAudio')
 		self.pyauseframe.grid(row=0, column=0)
 		
-		
+		self.raw=[]
 		# Items in Audio Setup Frame
 		self.adriverlabel = ttk.Label(self.pyauseframe, text='Treibertyp')
 		self.adriverlabel.grid(row=1, column=0)
@@ -440,7 +443,10 @@ class MES_GUI:
 			print(rawfile+' saved')
 		self.cursiavg-=1
 
-		if (self.cursiavg==0) & (self.impcheck.get()):
+		if self.imgcheck.get():
+			self.raw.append(input)
+
+		if (self.cursiavg==0) and (self.impcheck.get()):
 			self.generateIR()
 		#toSave = np.array(output.transpose(),dtype=('float32'))	
 		#scipy.io.wavfile.write('measure_output.wav',int(self.fs), toSave)
@@ -498,6 +504,16 @@ class MES_GUI:
 			wf.writeframes(b''.join(self.record))
 			wf.close()
 		self.cursiavg-=1
+
+		# Convert to Numpy array and add to temp raw list
+		if self.imgcheck.get():
+			MAX_y = 2.0**(p.get_sample_size(FORMAT) * 8 - 1)
+			y = np.array(struct.unpack("%dh" % (BUFFER * ICHANNELS), self.record)) / MAX_y
+			x = np.array
+			for i in range(0,ICHANNELS):
+				x[i,:]=y[i::ICHANNELS)
+			self.raw.append(x)
+
 		if (self.cursiavg==0) & self.impcheck.get():
 			self.generateIR()
 
@@ -536,8 +552,31 @@ class MES_GUI:
 		if filepath:
 			self.filepath.set(filepath)
 	def generateIR(self):
-		pass
-
+		if self.sisecb.get()=='Sweep':
+			self.generateSweepIR()
+	def generateSweepIR():
+		Lsig=len(self.signal)
+		Lraw=len(self.raw[0])
+		NFFTsig=nextpow2(Lsig)
+		NFFTraw=nextpow2(Lraw)
+		if NFFTsig != NFFTraw:
+			raise Exception('NFFTsig != NFFTraw')
+		else:
+			NFFT=NFFTsig
+		sigfft=fft(self.signal,n=NFFT)
+		rawffts=[]
+		N=self.raw[0].shape[0]
+		# Generate FFTs for raw fieles
+		for i in range(0,len(self.raw)):
+			rawffts.append(fftn(self.raw[i],s=[NFFT]))
+		# Average Raw Content
+		rawfft=np.array(np.zeros(N,NFFT),dtype=np.complex128))
+		for i in range(0,len(self.raw)):
+			rawfft=rawfft+rawffts[i]
+		rawfft=rawfft/(i+1)
+		imp=np.array(zeros(rawfft.shape))
+		for i in range(0,N):
+			imp[i,:]=np.real(fftshift(ifft(sigfft/rawfft[i,:])))
 
 root = tkinter.Tk()
 mes_gui = MES_GUI(root)
