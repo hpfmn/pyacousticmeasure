@@ -11,6 +11,8 @@ import scipy.signal
 import scipy.io.wavfile
 import wave
 import os
+from numpy.fft import fft,ifft,fftshift,ifftshift
+import pysoundfile
 
 jack_running=True
 try:
@@ -28,6 +30,7 @@ for i in range(0,p.get_host_api_count()):
 	hostapis[p.get_host_api_info_by_index(i)['name']] = i
 
 def listadev(hostapi, iotype):
+	"""Returns a dictionary containing name and index of all devices of a specific hostapi"""
 	adevs=dict()
 	for i in range(0,p.get_host_api_info_by_index(hostapi)['deviceCount']):
 		if iotype=='i':
@@ -41,6 +44,7 @@ def listadev(hostapi, iotype):
 
 
 class MES_GUI:
+	"""Class for measurement GUI """
 	def __init__(self, parent):
 		self.myParent = parent
 		self.ausenb = ttk.Notebook(parent)
@@ -269,8 +273,6 @@ class MES_GUI:
 			self.sweepframe.grid_forget()
 			self.noiseframe.grid(row=2,column=0, columnspan=2)
 
-
-
 	def fschange(self, event):
 		fsold=self.fs
 		self.fs=int(self.fscb.get())
@@ -319,6 +321,7 @@ class MES_GUI:
 
 	def TestPyJack(self):
 		CHANNELS=len(self.jaoutlist.curselection())
+		self.fs = float(jack.get_sample_rate())
 		self.generate_signal[self.sisecb.get()]()
 		print(self.jaoutlist.curselection())
 		for i in range(0,len(self.jaoutlist.curselection())):
@@ -331,7 +334,6 @@ class MES_GUI:
 		jack.register_port('dummy_input', jack.IsInput)
 		print(jack.get_ports())
 
-		Sr = float(jack.get_sample_rate())
 		N = jack.get_buffer_size()
 
 		input  = np.zeros((1,len(self.signal)),'f')
@@ -390,10 +392,14 @@ class MES_GUI:
 					self.MesPyAudio()
 				if(self.IsPyJack()):
 					self.MesPyJack()
+		if self.sigcheck.get():
+			toSave=np.array(self.signal.transpose(),dtype=('float32'))
+			scipy.io.wavfile.write(
 	
 	def MesPyJack(self):
 		OCHANNELS=len(self.jaoutlist.curselection())
 		ICHANNELS=len(self.jainplist.curselection())
+		self.fs = float(jack.get_sample_rate())
 		self.generate_signal[self.sisecb.get()]()
 		jack.activate()
 
@@ -406,7 +412,6 @@ class MES_GUI:
 			jack.register_port('input_'+str(i), jack.IsInput)
 			jack.connect(self.jainplist.get(self.jaoutlist.curselection()[i]), 'measure:input_'+str(i))
 
-		Sr = float(jack.get_sample_rate())
 		N = jack.get_buffer_size()
 
 		input  = np.zeros((ICHANNELS,len(self.signal)),'f')
@@ -431,14 +436,14 @@ class MES_GUI:
 		if self.rawcheck.get():
 			rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(self.cursiavg)+'.wav'
 			toSave = np.array(input.transpose(),dtype=('float32'))	
-			scipy.io.wavfile.write(rawfile,int(Sr), toSave)
+			scipy.io.wavfile.write(rawfile,int(self.fs), toSave)
 			print(rawfile+' saved')
 		self.cursiavg-=1
 
 		if (self.cursiavg==0) & (self.impcheck.get()):
 			self.generateIR()
 		#toSave = np.array(output.transpose(),dtype=('float32'))	
-		#scipy.io.wavfile.write('measure_output.wav',int(Sr), toSave)
+		#scipy.io.wavfile.write('measure_output.wav',int(self.fs), toSave)
 
 
 	def MesPyAudio(self):
