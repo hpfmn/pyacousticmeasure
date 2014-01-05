@@ -394,7 +394,7 @@ class MES_GUI:
 					self.MesPyJack()
 		if self.sigcheck.get():
 			toSave=np.array(self.signal.transpose(),dtype=('float32'))
-			scipy.io.wavfile.write(
+			scipy.io.wavfile.write(sigfile,int(self.fs),toSave)
 	
 	def MesPyJack(self):
 		OCHANNELS=len(self.jaoutlist.curselection())
