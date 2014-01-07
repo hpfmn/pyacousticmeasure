@@ -2,19 +2,19 @@
 # Source Code can be found at:
 #	https://ccrma.stanford.edu/realsimple/imp_meas/golay_response.m
 #	https://ccrma.stanford.edu/realsimple/imp_meas/generate_golay.m
-
+import numpy as np
 def generate_golay(N):
 	""" Generate the Golay codes a and b with length 2**N """
 	# These initial a and b values are Golay
-	a = [1 1]
-	b = [1 -1]
+	a = np.array([1, 1])
+	b = np.array([1, -1])
 
 	# Iterate to create a longer Golay sequence
 	while N>1:
 		olda = a
 		oldb = b
-		a = [olda oldb]
-		b = [olda -oldb]
+		a = np.concatenate((olda, oldb))
+		b = np.concatenate((olda, -1*oldb))
 
 		N -= 1
 
