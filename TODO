@@ -7,6 +7,8 @@ mes
 		- basic file nameing implemented
 	- MLS/Golay signal Generator
 	- ImpulseResponse Generator (FFT division or XCorr)
+		-almost done (Implemented in golay.py and mls.py)
+	- Option to load a wav file as a stimuls
 
 calib
 	- add functionality to convolute files with generated Impulse Responses
