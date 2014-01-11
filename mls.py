@@ -13,7 +13,7 @@ tap4=[0,0,0,0,0,0,1,0,0,0, 2,1, 2, 0,2,0,0,1,0,0,0,0,1,0,1,1,0,0, 1,0, 1]
 def generate_mls(n,flag):
 	# Initilize buffer
 	if flag == 1:
-		abuff = np.ones(n,dtype=np.int32)
+		abuff = np.ones(n,dtype=np.int8)
 	else:
 		while True:
 			abuff = np.array(np.round(rand(n)),dtype=np.int32)
@@ -21,7 +21,7 @@ def generate_mls(n,flag):
 			if 1 in abuff:
 				break
 	# initilize output
-	y=np.zeros(2**n-1,dtype=np.int32)
+	y=np.zeros(2**n-1,dtype=np.int8)
 	# shift register loop
 	for i in range(1,int((2**n))):
 		xorbit = abuff[tap1[n-2]-1]^abuff[tap2[n-2]-1]
