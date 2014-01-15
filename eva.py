@@ -13,6 +13,11 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 import matplotlib.colors
+from numpy.fft import fft,ifft,fftshift,ifftshift
+
+def find_nearest(array,value):
+	idx = (np.abs(array-value)).argmin()
+	return idx
 
 cc = matplotlib.colors.ColorConverter()
 
@@ -21,7 +26,7 @@ def nextpow2(i):
 
 class EVA_GUI:
 	def __init__(self, parent):
-		self.plotdata_dict={'wvplot': self.wvplot, 'psd': self.psdplot, 'spec': self.specplot}
+		self.plotdata_dict={'wvplot': self.wvplot, 'psd': self.psdplot, 'spec': self.specplot, 'angle': self.angleplot, 'groupdelay': self.gd_plot, 'polar': self.polarplot}
 		self.myParent = parent
 		self.filesframe = ttk.Frame(parent)
 		self.filesframe.grid(row=0, column=0, columnspan=2, sticky=(tkinter.N, tkinter.S, tkinter.E, tkinter.W))
@@ -59,7 +64,10 @@ class EVA_GUI:
 		self.evatree.grid(row=0,column=0, sticky=(tkinter.N, tkinter.W, tkinter.S, tkinter.E))
 		self.evatree.insert('','end','wvplot', text='Plot Wellenform')
 		self.evatree.insert('','end','psd', text='Plot Periodogram')
+		self.evatree.insert('','end','angle', text='Plot Angle')
+		self.evatree.insert('','end','groupdelay', text='Plot Group Delay')
 		self.evatree.insert('','end','spec', text='Plot Spektogram')
+		self.evatree.insert('','end','polar', text='Polar')
 		self.evatree.selection_set('wvplot')
 		self.fileslist.bind('<<ListboxSelect>>', self.plotdata)
 		self.evatree.bind('<<TreeviewSelect>>', self.plotdata)
@@ -120,6 +128,34 @@ class EVA_GUI:
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 			subpl.hold(True)
 		self.plotcanvas.show()
+	def angleplot(self):
+		subpl = self.fig.add_subplot(111)
+		subpl.hold(False)
+		for i in self.fileslist.curselection():
+			fs=self.datas[self.fileslist.get(i)][0]
+			data=self.datas[self.fileslist.get(i)][1]
+			nfft=int(nextpow2(len(data)))
+			data_fft=fft(data,n=nfft)
+			angle_fft=np.angle(data_fft[nfft/2:])
+			f=np.linspace(0,fs/2,nfft/2)
+			p = subpl.semilogx(f, angle_fft)
+			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
+			subpl.hold(True)
+		self.plotcanvas.show()
+	def gd_plot(self):
+		subpl = self.fig.add_subplot(111)
+		subpl.hold(False)
+		for i in self.fileslist.curselection():
+			fs=self.datas[self.fileslist.get(i)][0]
+			data=self.datas[self.fileslist.get(i)][1]
+			nfft=int(nextpow2(len(data)))
+			data_fft=fft(data,n=nfft)
+			f=np.linspace(0,fs/2,nfft/2)
+			gd=-1*(np.angle(data_fft[nfft/2:])/(2*np.pi*f))
+			p = subpl.semilogx(f, gd)
+			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
+			subpl.hold(True)
+		self.plotcanvas.show()
 	def specplot(self):
 		subpl = self.fig.add_subplot(111)
 		subpl.hold(False)
@@ -129,7 +165,27 @@ class EVA_GUI:
 			subpl.specgram(data,Fs=fs)
 			subpl.hold(True)
 		self.plotcanvas.show()
-
+	def polarplot(self):
+		self.fig.clear()
+		subpl = self.fig.add_subplot(111, polar=True)
+		subpl.hold(False)
+		elements=len(self.fileslist.curselection())
+		print(elements)
+		plot_degree=2*np.pi
+		r = np.linspace(0,plot_degree,elements)
+		theta = np.zeros(elements)
+		x = 0
+		for i in self.fileslist.curselection():
+			fs=self.datas[self.fileslist.get(i)][0]
+			data=self.datas[self.fileslist.get(i)][1]
+			nfft=int(nextpow2(len(data)))
+			data_fft=fft(data,n=nfft)
+			f=np.linspace(0,fs/2,nfft/2)
+			theta[x]=np.abs(data_fft[find_nearest(f,1000)+(nfft/2)])
+			x+=1
+		p = subpl.plot(r,theta)
+		self.plotcanvas.show()
+	
 root = tkinter.Tk()
 root.columnconfigure(0, weight=1)
 root.rowconfigure(0, weight=1)
