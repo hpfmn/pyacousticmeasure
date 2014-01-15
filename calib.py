@@ -53,7 +53,7 @@ class CALIB_GUI:
 			while name in list(self.datas.keys()):
 				name='_'+name
 			self.fileslist.insert(tkinter.END, name)
-		self.datas[name] = (fs, data[:,i])
+			self.datas[name] = (fs, data[:,i])
 	def rem_files(self):
 		while () != self.fileslist.curselection():
 			element=self.fileslist.curselection()[0]
