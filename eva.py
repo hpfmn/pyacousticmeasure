@@ -14,6 +14,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 import matplotlib.colors
 from numpy.fft import fft,ifft,fftshift,ifftshift
+from cfgdlg import cfgdlg
 
 def find_nearest(array,value):
 	idx = (np.abs(array-value)).argmin()
@@ -35,6 +36,10 @@ def phaseunwrap(phase):
 class EVA_GUI:
 	def __init__(self, parent):
 		self.plotdata_dict={'wvplot': self.wvplot, 'psd': self.psdplot, 'spec': self.specplot, 'angle': self.angleplot, 'groupdelay': self.gd_plot, 'polar': self.polarplot}
+		self.plotcfg_dict={'spec': self.specplotcfg}
+
+		self.specplotvalues={'NFFT': 256,'window':'hann','noverlap':128}
+
 		self.myParent = parent
 		self.filesframe = ttk.Frame(parent)
 		self.filesframe.grid(row=0, column=0, columnspan=2, sticky=(tkinter.N, tkinter.S, tkinter.E, tkinter.W))
@@ -79,6 +84,8 @@ class EVA_GUI:
 		self.evatree.selection_set('wvplot')
 		self.fileslist.bind('<<ListboxSelect>>', self.plotdata)
 		self.evatree.bind('<<TreeviewSelect>>', self.plotdata)
+		self.cfgbtn=ttk.Button(self.treeframe,text='Konfigurieren',command=self.plotcfg)
+		self.cfgbtn.grid(row=1,column=0, sticky=(tkinter.N,tkinter.W,tkinter.S,tkinter.E))
 
 		# Plot Frame Widgets
 
@@ -174,13 +181,21 @@ class EVA_GUI:
 			subpl.hold(True)
 		self.plotcanvas.show()
 	def specplot(self):
-		subpl = self.fig.add_subplot(111)
-		subpl.hold(False)
+		elements=len(self.fileslist.curselection())
+		self.fig.clear()
+		#subpl = self.fig.add_subplot(elements,1,1)
+		#subpl.hold(False)
+		print(self.specplotvalues)
+		nfft=int(self.specplotvalues['NFFT'])
+		window=scipy.signal.get_window(window=self.specplotvalues['window'],Nx=nfft)
+		noverlap=int(self.specplotvalues['noverlap'])
+		e=1
 		for i in self.fileslist.curselection():
+			subpl = self.fig.add_subplot(elements,1,e)
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
-			subpl.specgram(data,Fs=fs)
-			subpl.hold(True)
+			subpl.specgram(data,Fs=fs,NFFT=nfft,window=window,noverlap=noverlap)
+			e+=1
 		self.plotcanvas.show()
 	def polarplot(self):
 		self.fig.clear()
@@ -202,6 +217,15 @@ class EVA_GUI:
 			x+=1
 		p = subpl.plot(r,theta)
 		self.plotcanvas.show()
+	def plotcfg(self):
+		self.plotcfg_dict[self.evatree.selection()[0]]()
+	def specplotcfg(self):
+		nfft=self.specplotvalues['NFFT']
+		window=self.specplotvalues['window']
+		noverlap=self.specplotvalues['noverlap']
+		cfgvalues=['Spektogramm Konfiguration',['NFFT','e',str(nfft)],['window','cbro',window,'boxcar', 'triang', 'blackman', 'hamming', 'hann', 'bartlett', 'flattop', 'parzen', 'bohman', 'blackmanharris', 'nuttall', 'barthann'],['noverlap','e',str(noverlap)]]
+		self.specplotvalues=cfgdlg(cfgvalues)
+		self.specplot()
 	
 root = tkinter.Tk()
 root.columnconfigure(0, weight=1)

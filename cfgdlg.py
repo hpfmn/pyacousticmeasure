@@ -2,8 +2,8 @@ import tkinter
 import tkinter.ttk as ttk
 
 def cfgdlg(params):
-	cfgroot = tkinter.Tk()
-	cfgroot.wm_title(params[0])
+	cfgroot = tkinter.Toplevel()
+	cfgroot.title(params[0])
 	labels=dict()
 	elements=dict()
 	for i in range(1,len(params)):
@@ -24,9 +24,9 @@ def cfgdlg(params):
 			elements[params[i][0]].value=tkinter.StringVar()
 			elements[params[i][0]].config(textvariable=elements[params[i][0]].value)
 			elements[params[i][0]].grid(row=i-1,column=1)
-			if len(params[i])>2:
-				elements[params[i][0]].configure(values=params[i][2:])
-				elements[params[i][0]].current(0)
+			if len(params[i])>3:
+				elements[params[i][0]].configure(values=params[i][3:])
+				elements[params[i][0]].set(params[i][2])
 		
 		# Comboxbox normal State
 		if params[i][1]=='cb':
@@ -50,9 +50,11 @@ def cfgdlg(params):
 			
 	btn=ttk.Button(cfgroot,text='OK',command=cfgroot.destroy)
 	btn.grid(row=i,column=0,columnspan=2)
-	cfgroot.mainloop()
+	#cfgroot.mainloop()
+	#while run==True:
+	#	pass
+	cfgroot.wait_window()
 	values=dict()
 	for i in elements.keys():
 		values[i]=elements[i].value.get()
 	return values
-
