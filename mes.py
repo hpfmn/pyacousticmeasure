@@ -569,12 +569,6 @@ class MES_GUI:
 		Lraw=len(self.raw[0][0])
 		NFFTsig=nextpow2(Lsig)
 		NFFTraw=nextpow2(Lraw)
-		print(self.raw[0])
-		print(self.raw)
-		print(Lsig)
-		print(Lraw)
-		print(NFFTsig)
-		print(NFFTraw)
 		if NFFTsig != NFFTraw:
 			raise Exception('NFFTsig != NFFTraw')
 		else:
@@ -590,7 +584,7 @@ class MES_GUI:
 		for i in range(0,len(self.raw)):
 			rawfft=rawfft+rawffts[i]
 		rawfft=rawfft/(i+1)
-		imp=np.array(zeros(rawfft.shape))
+		imp=np.array(np.zeros(rawfft.shape))
 		for i in range(0,N):
 			imp[i,:]=np.real(fftshift(ifft(sigfft/rawfft[i,:])))
 	def inccounter(self):
