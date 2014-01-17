@@ -24,6 +24,14 @@ cc = matplotlib.colors.ColorConverter()
 def nextpow2(i):
 	return 2**np.ceil(np.log2(i))
 
+def phaseunwrap(phase):
+	for i in range(1,len(phase)):
+			if((phase[i]-phase[i-1]) < -np.pi):
+				phase[i]+=2*np.pi
+			if((phase[i]-phase[i-1]) > np.pi):
+				phase[i]-=2*np.pi
+	return phase
+
 class EVA_GUI:
 	def __init__(self, parent):
 		self.plotdata_dict={'wvplot': self.wvplot, 'psd': self.psdplot, 'spec': self.specplot, 'angle': self.angleplot, 'groupdelay': self.gd_plot, 'polar': self.polarplot}
@@ -112,7 +120,7 @@ class EVA_GUI:
 		subpl.hold(False)
 		for i in self.fileslist.curselection():
 			data=self.datas[self.fileslist.get(i)][1]
-			p = subpl.plot(data)
+			p = subpl.plot(data,'.')
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 			subpl.hold(True)
 		self.plotcanvas.show()
@@ -135,10 +143,13 @@ class EVA_GUI:
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
 			nfft=int(nextpow2(len(data)))
-			data_fft=fft(data,n=nfft)
-			angle_fft=np.angle(data_fft[nfft/2:])
+			data_fft=fftshift(fft(data,n=nfft))
+			angle_fft=np.angle(data_fft)
+			angle_fft=np.unwrap(angle_fft)
+			#angle_fft=phaseunwrap(angle_fft)
+			angle_fft=angle_fft[nfft/2:]
 			f=np.linspace(0,fs/2,nfft/2)
-			p = subpl.semilogx(f, angle_fft)
+			p = subpl.plot(f, angle_fft)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 			subpl.hold(True)
 		self.plotcanvas.show()
@@ -149,10 +160,16 @@ class EVA_GUI:
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
 			nfft=int(nextpow2(len(data)))
-			data_fft=fft(data,n=nfft)
+			data_fft=fftshift(fft(data,n=nfft))
 			f=np.linspace(0,fs/2,nfft/2)
-			gd=-1*(np.angle(data_fft[nfft/2:])/(2*np.pi*f))
-			p = subpl.semilogx(f, gd)
+			#gd=-1*(phaseunwrap(np.angle(data_fft[nfft/2:]))/(2*np.pi*f))
+			delta_f=fs/nfft
+			phase=np.angle(data_fft[nfft/2:])
+			phase=np.unwrap(phase)
+			gd=np.zeros(len(phase))
+			for n in range(1,len(phase)-1):
+				gd[n]=-1*((phase[n-1]-phase[n+1])/(f[n-1]-f[n+1]))
+			p = subpl.plot(f, gd)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 			subpl.hold(True)
 		self.plotcanvas.show()
