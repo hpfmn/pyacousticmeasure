@@ -1,13 +1,15 @@
 eva
 	- make custom adjust dialogs for plots
 		- wrote function to display dialogs (cfgdlg)
+		- functions works and first dialog implemented
 	- add more plots
 mes
 	- save file
 		- basic file nameing implemented
-	- MLS/Golay signal Generator
 	- ImpulseResponse Generator (FFT division or XCorr)
 		-almost done (Implemented in golay.py and mls.py)
+		-needs FHT
+		-SweepIR need debuging
 	- Option to load a wav file as a stimuls
 
 calib
