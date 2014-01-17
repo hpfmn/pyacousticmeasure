@@ -587,6 +587,11 @@ class MES_GUI:
 		imp=np.array(np.zeros(rawfft.shape))
 		for i in range(0,N):
 			imp[i,:]=np.real(fftshift(ifft(sigfft/rawfft[i,:])))
+		toSave=np.array(imp.transpose(), dtype=np.float32)
+		impfile=self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
+		scipy.io.wavfile.write(impfile,int(self.fs),toSave)
+		raw=[]
+		imp=[]
 	def inccounter(self):
 		i=int(self.counter.get())
 		i+=1
