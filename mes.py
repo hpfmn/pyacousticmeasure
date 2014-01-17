@@ -11,7 +11,7 @@ import scipy.signal
 import scipy.io.wavfile
 import wave
 import os
-from numpy.fft import fft,ifft,fftshift,ifftshift
+from numpy.fft import fft,ifft,fftshift,ifftshift,fftn,ifftn
 import pysoundfile
 
 jack_running=True
@@ -128,6 +128,7 @@ class MES_GUI:
 			
 			self.get_jack_ports()
 			self.ausenb.add(self.pyjaseframe, text='PyJack', underline=0, padding=2)
+			self.ausenb.select(1)
 		self.ausenb.bind('<<NotebookTabChanged>>', self.tabchange)
 
 
@@ -173,8 +174,14 @@ class MES_GUI:
 		self.sweepmethodcb = ttk.Combobox(self.sweepframe, values=('logarithmic', 'linear', 'quadratic'), state='readonly')
 		self.sweepmethodcb.current(0)
 		self.sweepmethodcb.grid(row=2,column=1)
+		self.sweepgenkindlb=ttk.Label(self.sweepframe, text='Generatorart')
+		self.sweepgenkindcb=ttk.Combobox(self.sweepframe, values=('Zeitsignal','Frequenzsignal'))
+		self.sweepgenkindlb.grid(row=3,column=0)
+		self.sweepgenkindcb.grid(row=3,column=1)
+
 
 		self.sweepframe.grid(row=2, column=0, columnspan=2)
+
 		# Frame with widgets for noise
 		self.noiseframe = ttk.Frame(self.siseframe)
 
@@ -236,7 +243,7 @@ class MES_GUI:
 		self.filepath.set(os.getcwd())
 		self.pathlabel.grid(row=2, column=0)
 		self.pathent.grid(row=2,column=1,columnspan=2,sticky=(tkinter.E,tkinter.W))
-		self.openbtn=ttk.Button(self.fileframe, text="Oeffnen", command=self.selectpath)
+		self.openbtn=ttk.Button(self.fileframe, text="Auswählen", command=self.selectpath)
 		self.openbtn.grid(row=2,column=3)
 
 
@@ -395,9 +402,10 @@ class MES_GUI:
 					self.MesPyAudio()
 				if(self.IsPyJack()):
 					self.MesPyJack()
-		if self.sigcheck.get():
-			toSave=np.array(self.signal.transpose(),dtype=('float32'))
-			scipy.io.wavfile.write(sigfile,int(self.fs),toSave)
+			if self.sigcheck.get():
+				toSave=np.array(self.signal.transpose(),dtype=('float32'))
+				scipy.io.wavfile.write(sigfile,int(self.fs),toSave)
+			self.inccounter()
 	
 	def MesPyJack(self):
 		OCHANNELS=len(self.jaoutlist.curselection())
@@ -443,8 +451,9 @@ class MES_GUI:
 			print(rawfile+' saved')
 		self.cursiavg-=1
 
-		if self.imgcheck.get():
+		if self.impcheck.get():
 			self.raw.append(input)
+			print('append to raw')
 
 		if (self.cursiavg==0) and (self.impcheck.get()):
 			self.generateIR()
@@ -511,8 +520,9 @@ class MES_GUI:
 			y = np.array(struct.unpack("%dh" % (BUFFER * ICHANNELS), self.record)) / MAX_y
 			x = np.array
 			for i in range(0,ICHANNELS):
-				x[i,:]=y[i::ICHANNELS)
+				x[i,:]=y[i::ICHANNELS]
 			self.raw.append(x)
+			print('raw appened')
 
 		if (self.cursiavg==0) & self.impcheck.get():
 			self.generateIR()
@@ -554,15 +564,21 @@ class MES_GUI:
 	def generateIR(self):
 		if self.sisecb.get()=='Sweep':
 			self.generateSweepIR()
-	def generateSweepIR():
+	def generateSweepIR(self):
 		Lsig=len(self.signal)
-		Lraw=len(self.raw[0])
+		Lraw=len(self.raw[0][0])
 		NFFTsig=nextpow2(Lsig)
 		NFFTraw=nextpow2(Lraw)
+		print(self.raw[0])
+		print(self.raw)
+		print(Lsig)
+		print(Lraw)
+		print(NFFTsig)
+		print(NFFTraw)
 		if NFFTsig != NFFTraw:
 			raise Exception('NFFTsig != NFFTraw')
 		else:
-			NFFT=NFFTsig
+			NFFT=int(NFFTsig)
 		sigfft=fft(self.signal,n=NFFT)
 		rawffts=[]
 		N=self.raw[0].shape[0]
@@ -570,14 +586,17 @@ class MES_GUI:
 		for i in range(0,len(self.raw)):
 			rawffts.append(fftn(self.raw[i],s=[NFFT]))
 		# Average Raw Content
-		rawfft=np.array(np.zeros(N,NFFT),dtype=np.complex128))
+		rawfft=np.array(np.zeros((N,NFFT)),dtype=np.complex128)
 		for i in range(0,len(self.raw)):
 			rawfft=rawfft+rawffts[i]
 		rawfft=rawfft/(i+1)
 		imp=np.array(zeros(rawfft.shape))
 		for i in range(0,N):
 			imp[i,:]=np.real(fftshift(ifft(sigfft/rawfft[i,:])))
-
+	def inccounter(self):
+		i=int(self.counter.get())
+		i+=1
+		self.counter.set('0'*(len(self.counter.get())-len(str(i)))+str(i))
 root = tkinter.Tk()
 mes_gui = MES_GUI(root)
 root.mainloop()
