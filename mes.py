@@ -445,7 +445,7 @@ class MES_GUI:
 		jack.deactivate()
 
 		if self.rawcheck.get():
-			rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(self.cursiavg)+'.wav'
+			rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(int(self.siavg)-self.cursiavg)+'.wav'
 			toSave = np.array(input.transpose(),dtype=('float32'))	
 			scipy.io.wavfile.write(rawfile,int(self.fs), toSave)
 			print(rawfile+' saved')
@@ -505,7 +505,7 @@ class MES_GUI:
 
 		# If selected save raw data as Wavfile
 		if self.rawcheck.get():
-			rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(self.cursiavg)+'.wav'
+			rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(int(self.siavg)-self.cursiavg)+'.wav'
 			wf = wave.open(rawfile, 'wb')
 			wf.setnchannels(ICHANNELS)
 			wf.setsampwidth(p.get_sample_size(FORMAT))
@@ -562,31 +562,29 @@ class MES_GUI:
 		if filepath:
 			self.filepath.set(filepath)
 	def generateIR(self):
+		# Average Data
+		self.average=raw[0]
+		for i in range(1,len(raw)):
+			self.average=self.average+raw[i]
+		self.average=self.average/len(raw)
+
 		if self.sisecb.get()=='Sweep':
 			self.generateSweepIR()
 	def generateSweepIR(self):
 		Lsig=len(self.signal)
-		Lraw=len(self.raw[0][0])
+		Lraw=len(self.average[0,:])
 		NFFTsig=nextpow2(Lsig)
-		NFFTraw=nextpow2(Lraw)
+		NFFTavg=nextpow2(Lavg)
 		if NFFTsig != NFFTraw:
-			raise Exception('NFFTsig != NFFTraw')
+			raise Exception('NFFTsig != NFFTavg')
 		else:
 			NFFT=int(NFFTsig)
 		sigfft=fft(self.signal,n=NFFT)
-		rawffts=[]
 		N=self.raw[0].shape[0]
-		# Generate FFTs for raw fieles
-		for i in range(0,len(self.raw)):
-			rawffts.append(fftn(self.raw[i],s=[NFFT]))
-		# Average Raw Content
-		rawfft=np.array(np.zeros((N,NFFT)),dtype=np.complex128)
-		for i in range(0,len(self.raw)):
-			rawfft=rawfft+rawffts[i]
-		rawfft=rawfft/(i+1)
+		avgfft=fftn(self.average,s=[NFFT])
 		imp=np.array(np.zeros(rawfft.shape))
 		for i in range(0,N):
-			imp[i,:]=np.real(fftshift(ifft(sigfft/rawfft[i,:])))
+			imp[i,:]=np.real(fftshift(ifft(sigfft/avgfft[i,:])))
 		toSave=np.array(imp.transpose(), dtype=np.float32)
 		impfile=self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
 		scipy.io.wavfile.write(impfile,int(self.fs),toSave)
