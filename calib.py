@@ -4,6 +4,7 @@ import tkinter.ttk as ttk
 import pysoundfile
 import tkinter.filedialog as filedialog
 import os
+import os.path
 from numpy.fft import fft, ifft, fftshift, ifftshift
 
 
@@ -13,7 +14,7 @@ def nextpow2(n):
 class CALIB_GUI:
 	def __init__(self, parent):
 		self.myparent = parent
-		self.calibframe = ttk.Frame(self.myparent)
+		self.calibframe = ttk.LabelFrame(self.myparent, text='Impulsantwort erstellen')
 		self.calibframe.grid(row=0,column=0)
 		self.datas = dict()
 
@@ -37,6 +38,50 @@ class CALIB_GUI:
 		self.refbtn.grid(row=3,column=0)
 		self.delbtn = ttk.Button(self.calibframe, text='Auswahl entfernen', command=self.rem_files)
 		self.delbtn.grid(row=3,column=2)
+
+
+		# Convolution Frame
+
+		self.convframe = ttk.LabelFrame(self.myparent, text='Dateien mit Impulsantwort falten')
+		self.convframe.grid(row=1,column=0)
+
+		self.multichannellabel= ttk.Label(self.convframe, text='Multichannel Datei')
+		self.multichannellabel.grid(row=0,column=0)
+		self.multichannel=tkinter.IntVar()
+		self.multichannel.set(1)
+		self.multichannelcheck=ttk.Checkbutton(self.convframe, variable=self.multichannel, command=self.multichtoggle)
+		self.multichannelcheck.grid(row=0,column=1)
+		
+		self.impfile=tkinter.StringVar()
+		self.impfilelabel=ttk.Label(self.convframe, text='Impulsantwort:')
+		self.impfilee=ttk.Entry(self.convframe, textvariable=self.impfile)
+		self.impfilelabel.grid(row=1,column=0)
+		self.impfilee.grid(row=1,column=1)
+		self.openimpfilebtn=ttk.Button(self.convframe, text='Impulsantwort wählen', command=self.chooseimp)
+		self.openimpfilebtn.grid(row=1,column=2)
+
+
+		self.filespath=tkinter.StringVar()
+		self.pathlabel=ttk.Label(self.convframe, text='Pfad:')
+		self.pathe=ttk.Entry(self.convframe, textvariable=self.filespath)
+		self.openfilespath=ttk.Button(self.convframe, text='Bearbeitungs-Pfad wählen', command=self.choosepath)
+		self.pathlabel.grid(row=2, column=0)
+		self.pathe.grid(row=2,column=1)
+		self.openfilespath.grid(row=2,column=2)
+
+		self.prefixlabel=ttk.Label(self.convframe, text='Dateianfang:')
+		self.prefix=tkinter.StringVar()
+		self.prefixe=ttk.Entry(self.convframe, textvariable=self.prefix)
+		self.prefixlabel.grid(row=3,column=0)
+		self.prefixe.grid(row=3,column=1)
+
+		self.channelframe=ttk.Frame(self.convframe)
+
+		self.convbutton=ttk.Button(self.convframe, text='Falten',command=self.convfiles)
+		self.convbutton.grid(row=4,column=0,columnspan=3)
+		
+		
+
 	def add_files(self):
 		filename = filedialog.askopenfilename(filetypes=[('Wav-Files','*.wav')])
 		#fs,data_read = scipy.io.wavfile.read(filename)
@@ -104,6 +149,31 @@ class CALIB_GUI:
 			self.fileslist.insert(sel+2,self.fileslist.get(sel))
 			self.fileslist.delete(sel)
 			self.fileslist.select_set(sel+1)
+	
+	def chooseimp(self):
+		impfile = filedialog.askopenfilename(filetypes=[('Wav-Files','*.wav')])
+		if impfile!='':
+			self.impfile.set(impfile)
+	def choosepath(self):
+		path=filedialog.askdirectory()
+		if path:
+			self.filespath.set(path)
+	def multichtoggle(self):
+		if self.multichannel.get():
+			self.channelframe.grid_forget()
+		else:
+			self.channelframe.grid(row=4,column=0,columnspan=3)
+	def convfiles(self):
+		impfile=self.impfile.get()
+		path=self.filespath.get()
+		prefix=self.prefix.get()
+		if (impfile!='') & (path!='') & (prefix!=''):
+			convfiles=[]
+			for files in os.listdir(path):
+				if os.path.isfile(files) and (files.find(prefix)!=-1):
+					convfiles.append(files)
+		else:
+			print('everything has to be filled out')
 
 
 
