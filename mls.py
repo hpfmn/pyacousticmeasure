@@ -78,8 +78,8 @@ def generatetagL(mls,P,N,S):
 	
 	L=np.matix(np.zeros((N,P)))
 	for i in range(0,N):
-		L[i, 0:(index[i]%P)]=binmls(((index[i]%P)-1)::-1)
-		L[i, (index[i]%P):P]=binmls((P-1):((index[i]%P)-1):-1)
+		L[i, 0:(index[i]%P)]=binmls[((index[i]%P)-1)::-1]
+		L[i, (index[i]%P):P]=binmls[(P-1):((index[i]%P)-1):-1]
 	return np.array(powers*L)
 
 
@@ -95,7 +95,7 @@ def PermuteResponse(perm,tagL,P):
 	resp=perm[tagL]*fact
 	resp[P+1]=0
 
-def FastHadamard(x,P1,N)
+def FastHadamard(x,P1,N):
 	k1=P1
 	for k in range(0,N):
 		k2=k1/2
