@@ -13,6 +13,8 @@ import wave
 import os
 from numpy.fft import fft,ifft,fftshift,ifftshift,fftn,ifftn
 import pysoundfile
+import golay
+import mls
 
 jack_running=True
 try:
@@ -50,6 +52,10 @@ class MES_GUI:
 	"""Class for measurement GUI """
 	def __init__(self, parent):
 		self.myParent = parent
+		self.myParent.columnconfigure(0, weight=1)
+		self.myParent.columnconfigure(1, weight=1)
+		self.myParent.rowconfigure(0, weight=2)
+		self.myParent.rowconfigure(1, weight=1)
 		self.ausenb = ttk.Notebook(parent)
 		self.pyauseframe = ttk.LabelFrame(parent, text='Audiosetup PyAudio')
 		self.pyauseframe.grid(row=0, column=0)
@@ -100,7 +106,7 @@ class MES_GUI:
 		self.fscb.bind('<<ComboboxSelected>>', self.fschange)
 		self.fscb.grid(row=6, column=1) 
 		self.ausenb.add(self.pyauseframe, text='PyAudio', underline=0, padding=2)
-		self.ausenb.grid(row=0, column=0)
+		self.ausenb.grid(row=0, column=0, sticky=tkinter.W+tkinter.E+tkinter.S+tkinter.N)
 
 		# LabelFrame for PyJack Setup 
 		if jack_running:
@@ -135,79 +141,130 @@ class MES_GUI:
 		# Widgets in Signal Setup Frame
 
 		self.siseframe = ttk.LabelFrame(parent, text='Signalquelle')
-		self.siseframe.grid(row=0, column=1)
+		self.siseframe.grid(row=0, column=1, sticky=(tkinter.N, tkinter.S, tkinter.E, tkinter.W))
+		self.siseframe.columnconfigure(0, weight=1)
+		self.siseframe.columnconfigure(1, weight=1)
+		self.siseframe.rowconfigure(0, weight=1)
+		self.siseframe.rowconfigure(1, weight=1)
+		self.siseframe.rowconfigure(2, weight=5)
+		self.siseframe.rowconfigure(3, weight=1)
+		self.siseframe.rowconfigure(4, weight=1)
+		self.siseframe.rowconfigure(5, weight=1)
 
-		self.siselabel = ttk.Label(self.siseframe, text='Signal')
-		self.siselabel.grid(row=1, column=0)
-		self.sisecb = ttk.Combobox(self.siseframe, values=('Sweep', 'Rauschen', 'Sinus', 'Rechteck', 'Sägezahn'), state='readonly')
-		self.generate_signal={'Sweep' : self.sweepgen, 'Rauschen': self.noisegen, 'Sinus': self.singen, 'Rechteck': self.squaregen, 'Sägezahn': self.sawtoothgen}
+		self.siselabel = ttk.Label(self.siseframe, text='Signal', width=20)
+		self.siselabel.grid(row=1, column=0, sticky=(tkinter.W))
+		self.sisecb = ttk.Combobox(self.siseframe, values=('Sweep', 'MLS', 'Golay','Rauschen', 'Sinus', 'Rechteck', 'Sägezahn'), state='readonly')
+		self.generate_signal={'Sweep' : self.sweepgen, 'Rauschen': self.noisegen, 'MLS': self.mlsgen, 'Golay': self.golaygen,'Sinus': self.singen, 'Rechteck': self.squaregen, 'Sägezahn': self.sawtoothgen}
 		self.sisecb.current(newindex=0)
 		self.sisecb.bind('<<ComboboxSelected>>', self.signaltypechange)
-		self.sisecb.grid(row=1, column=1)
+		self.sisecb.grid(row=1, column=1, sticky=tkinter.E+tkinter.W)
 		self.siavglabel = ttk.Label(self.siseframe, text="Wiederholungen")
-		self.siavglabel.grid(row=5, column=0)
+		self.siavglabel.grid(row=5, column=0, sticky=(tkinter.W))
 		self.siavg = tkinter.StringVar()
 		self.siavgent = ttk.Entry(self.siseframe, textvariable=self.siavg)
 		self.siavg.set('2')
-		self.siavgent.grid(row=5,column=1)
+		self.siavgent.grid(row=5,column=1, sticky=tkinter.E+tkinter.W)
 		# Frame with widgets for sweep
 		self.sweepframe = ttk.Frame(self.siseframe)
-		self.f0label = ttk.Label(self.sweepframe, text='Startfrequenz')
-		self.f0label.grid(row=0, column=0)
+		self.f0label = ttk.Label(self.sweepframe, text='Startfrequenz', width=20)
+		self.f0label.grid(row=0, column=0, sticky=(tkinter.W))
 
 		self.f0 = tkinter.StringVar()
 		self.f0e = ttk.Entry(self.sweepframe, textvariable=self.f0)
-		self.f0e.grid(row=0, column=1)
+		self.f0e.grid(row=0, column=1, sticky=tkinter.E+tkinter.W)
 		self.f0.set('20')
 		
 		self.f1label = ttk.Label(self.sweepframe, text='Endfrequenz')
-		self.f1label.grid(row=1, column=0)
+		self.f1label.grid(row=1, column=0, sticky=(tkinter.W))
 		
-		self.f1 = tkinter.StringVar()
+		self.f1 = tkinter.StringVar() 
 		self.f1e = ttk.Entry(self.sweepframe, textvariable=self.f1)
 		self.f1.set('20000')
-		self.f1e.grid(row=1, column=1)
+		self.f1e.grid(row=1, column=1, sticky=tkinter.E+tkinter.W)
 
 		self.sweepmethodlabel = ttk.Label(self.sweepframe, text='Methode')
-		self.sweepmethodlabel.grid(row=2,column=0)
+		self.sweepmethodlabel.grid(row=2,column=0, sticky=tkinter.W+tkinter.E)
 
 		self.sweepmethodcb = ttk.Combobox(self.sweepframe, values=('logarithmic', 'linear', 'quadratic'), state='readonly')
 		self.sweepmethodcb.current(0)
-		self.sweepmethodcb.grid(row=2,column=1)
+		self.sweepmethodcb.grid(row=2,column=1, sticky=tkinter.E+tkinter.W)
 		self.sweepgenkindlb=ttk.Label(self.sweepframe, text='Generatorart')
-		self.sweepgenkindcb=ttk.Combobox(self.sweepframe, values=('Zeitsignal','Frequenzsignal'))
-		self.sweepgenkindlb.grid(row=3,column=0)
-		self.sweepgenkindcb.grid(row=3,column=1)
+		self.sweepgenkindcb=ttk.Combobox(self.sweepframe, state='readonly',values=('Frequenzbereich','Zeitbereich'))
+		self.sweepgenkindcb.current(0)
+		self.sweepgenkindlb.grid(row=3,column=0, sticky=(tkinter.W))
+		self.sweepgenkindcb.grid(row=3,column=1, sticky=tkinter.E+tkinter.W)
 
 
-		self.sweepframe.grid(row=2, column=0, columnspan=2)
+		self.sweepframe.grid(row=2, column=0, columnspan=2, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
+		self.sweepframe.columnconfigure(0, weight=1)
+		self.sweepframe.columnconfigure(1, weight=1)
+		self.sweepframe.rowconfigure(0, weight=1)
+		self.sweepframe.rowconfigure(1, weight=1)
+		self.sweepframe.rowconfigure(2, weight=1)
+		self.sweepframe.rowconfigure(3, weight=1)
+
 
 		# Frame with widgets for noise
 		self.noiseframe = ttk.Frame(self.siseframe)
 
 		self.levellabel= ttk.Label(self.siseframe, text='Pegel')
-		self.levellabel.grid(row=3, column=0)
+		self.levellabel.grid(row=3, column=0, sticky=(tkinter.W))
 		self.level=tkinter.StringVar()
 		self.levele = ttk.Entry(self.siseframe, textvariable=self.level)
 		self.level.set('-12')
-		self.levele.grid(row=3, column=1)
+		self.levele.grid(row=3, column=1, sticky=tkinter.E+tkinter.W)
 
 		self.durlabel = ttk.Label(self.siseframe, text='Dauer')
-		self.durlabel.grid(row=4, column=0)
 		self.durcb = ttk.Combobox(self.siseframe, values=(2**16/self.fs, 2**17/self.fs, 2**18/self.fs, 2**19/self.fs))
 		self.durcb.current(1)
-		self.durcb.grid(row=4, column=1)
+		self.durlabel.grid(row=4, column=0, sticky=tkinter.W+tkinter.E)
+		self.durcb.grid(row=4, column=1, sticky=tkinter.E+tkinter.W)
 
 		self.testbutton = ttk.Button(self.siseframe, text='Test', command=self.testButtonClick)
-		self.testbutton.grid(row=6, column=0)
+		self.testbutton.grid(row=6, column=0, columnspan=2)
 
 
+		#Frame for MLS
+		self.mlsframe= ttk.Frame(self.siseframe)
+		self.mlsnlabel=ttk.Label(self.mlsframe,text='MLS Ordnung', width=20)
+		self.mlsn=tkinter.StringVar()
+		self.mlsncb=ttk.Combobox(self.mlsframe,textvariable=self.mlsn,values=str(list(range(2,32)))[1:-1].split(', '))
+		self.mlsncb.current(12)
+		self.mlsnlabel.grid(row=0,column=0, sticky=tkinter.W)
+		self.mlsncb.grid(row=0,column=1, sticky=tkinter.W+tkinter.E)
+		self.mlsflag=tkinter.IntVar()
+		self.mlsflag.set(1)
+		self.mlsflaglabel=ttk.Label(self.mlsframe,text='Register mit 1 initialisieren')
+		self.mlsflagcheck=ttk.Checkbutton(self.mlsframe,variable=self.mlsflag)
+		self.mlsflaglabel.grid(row=1,column=0, sticky=tkinter.W)
+		self.mlsflagcheck.grid(row=1,column=1, sticky=tkinter.W)
+		self.mlsframe.rowconfigure(0,weight=1)
+		self.mlsframe.rowconfigure(1,weight=1)
+		self.mlsframe.columnconfigure(0,weight=1)
+		self.mlsframe.columnconfigure(1,weight=1)
+
+		#Frame for Golay
+		self.golayframe=ttk.Frame(self.siseframe)
+		self.golayframe.rowconfigure(0,weight=1)
+		self.golayframe.columnconfigure(0,weight=1)
+		self.golaynlabel=ttk.Label(self.golayframe,text='Golay Ordnung', width=20)
+		self.golayn=tkinter.StringVar()
+		self.golayncb=ttk.Combobox(self.golayframe,textvariable=self.golayn,values=str(list(range(2,32)))[1:-1].split(', '))
+		self.golayncb.current(12)
+		self.golaynlabel.grid(row=0,column=0, sticky=tkinter.W)
+		self.golayncb.grid(row=0,column=1, sticky=tkinter.W+tkinter.E)
 
 		# Fileframe
 		self.fileframe = ttk.LabelFrame(self.myParent,text="Dateien")
-		self.fileframe.grid(row=1, column=0)
+		self.fileframe.grid(row=1, column=0, columnspan=2, sticky=tkinter.N+tkinter.S+tkinter.W+tkinter.E)
+		self.fileframe.rowconfigure(0, weight=1)
+		self.fileframe.rowconfigure(1, weight=1)
+		self.fileframe.rowconfigure(2, weight=1)
+		self.fileframe.columnconfigure(0, weight=1)
+		self.fileframe.columnconfigure(1, weight=1)
+		self.fileframe.columnconfigure(2, weight=1)
 		self.savesellabel = ttk.Label(self.fileframe, text="Speichern: ")
-		self.savesellabel.grid(row=0,column=0)
+		self.savesellabel.grid(row=0,column=0, sticky=tkinter.W)
 
 
 		self.impcheck = tkinter.IntVar()
@@ -219,36 +276,36 @@ class MES_GUI:
 		self.impcheck.set(1)
 		self.rawcheck.set(1)
 		self.sigcheck.set(1)
-		self.impcheckbtn.grid(row=0,column=1)
-		self.rawcheckbtn.grid(row=0,column=2)
-		self.sigcheckbtn.grid(row=0,column=3)
+		self.impcheckbtn.grid(row=0,column=1, sticky=tkinter.W)
+		self.rawcheckbtn.grid(row=0,column=2, sticky=tkinter.W)
+		self.sigcheckbtn.grid(row=0,column=3, sticky=tkinter.W)
 
 		self.prefixlabel=ttk.Label(self.fileframe, text="Prefix")
 		self.prefix=tkinter.StringVar()
 		self.prefixent = ttk.Entry(self.fileframe,textvariable=self.prefix)
 		self.prefix.set('Measure')
-		self.prefixlabel.grid(row=1,column=0)
-		self.prefixent.grid(row=1,column=1)
+		self.prefixlabel.grid(row=1,column=0, sticky=tkinter.W)
+		self.prefixent.grid(row=1,column=1, sticky=tkinter.W)
 
 		self.counterlabel=ttk.Label(self.fileframe, text="Counter")
 		self.counter=tkinter.StringVar()
 		self.counterent  =ttk.Entry(self.fileframe, textvariable=self.counter)
 		self.counter.set('000001')
-		self.counterlabel.grid(row=1,column=2)
-		self.counterent.grid(row=1,column=3)
+		self.counterlabel.grid(row=1,column=2, sticky=tkinter.W)
+		self.counterent.grid(row=1,column=3, sticky=tkinter.W)
 
 		self.filepath=tkinter.StringVar()
 		self.pathlabel=ttk.Label(self.fileframe, text="Pfad: ")
 		self.pathent  =ttk.Entry(self.fileframe,textvariable=self.filepath)
 		self.filepath.set(os.getcwd())
-		self.pathlabel.grid(row=2, column=0)
+		self.pathlabel.grid(row=2, column=0, sticky=tkinter.W)
 		self.pathent.grid(row=2,column=1,columnspan=2,sticky=(tkinter.E,tkinter.W))
 		self.openbtn=ttk.Button(self.fileframe, text="Auswählen", command=self.selectpath)
-		self.openbtn.grid(row=2,column=3)
+		self.openbtn.grid(row=2,column=3, sticky=tkinter.W)
 
 
 		self.mesbutton = ttk.Button(self.fileframe, text='Messen', command=self.mesButtonClick)
-		self.mesbutton.grid(row=3,column=0)
+		self.mesbutton.grid(row=3,column=0, sticky=tkinter.W+tkinter.E)
 
 
 
@@ -276,12 +333,27 @@ class MES_GUI:
 		
 
 	def signaltypechange(self, event):
+		self.mlsframe.grid_remove()
+		self.golayframe.grid_remove()
+		self.noiseframe.grid_remove()
+		self.sweepframe.grid_remove()
+		self.durcb.grid_remove()
+		self.durlabel.grid_remove()
 		if self.sisecb.get() == 'Sweep':
-			self.noiseframe.grid_forget()
 			self.sweepframe.grid(row=2,column=0, columnspan=2)
+			self.durlabel.grid(row=4, column=0, sticky=tkinter.W+tkinter.E)
+			self.durcb.grid(row=4, column=1, sticky=tkinter.E+tkinter.W)
+			self.siseframe.rowconfigure(2, weight=5)
 		if self.sisecb.get() == 'Rauschen':
-			self.sweepframe.grid_forget()
 			self.noiseframe.grid(row=2,column=0, columnspan=2)
+			self.durlabel.grid(row=4, column=0, sticky=tkinter.W+tkinter.E)
+			self.durcb.grid(row=4, column=1, sticky=tkinter.E+tkinter.W)
+		if self.sisecb.get() == 'MLS':
+			self.mlsframe.grid(row=2,column=0, columnspan=2, sticky=tkinter.W+tkinter.E+tkinter.N+tkinter.S)
+			self.siseframe.rowconfigure(2, weight=3)
+		if self.sisecb.get() == 'Golay':
+			self.golayframe.grid(row=2,column=0, columnspan=2, sticky=tkinter.W+tkinter.E+tkinter.N+tkinter.S)
+			self.siseframe.rowconfigure(2, weight=1)
 
 	def fschange(self, event):
 		fsold=self.fs
@@ -315,7 +387,6 @@ class MES_GUI:
 		print(self.ausenb.tab(self.ausenb.select(),option='text'))
 
 	def TestPyAudio(self):
-		self.generate_signal[self.sisecb.get()]()
 		outputdev = self.aodevlist[self.aodevcb.get()]
 		CHANNELS=int(self.nooccb.get())
 		stream = p.open(format=FORMAT,
@@ -332,7 +403,6 @@ class MES_GUI:
 	def TestPyJack(self):
 		CHANNELS=len(self.jaoutlist.curselection())
 		self.fs = float(jack.get_sample_rate())
-		self.generate_signal[self.sisecb.get()]()
 		print(self.jaoutlist.curselection())
 		for i in range(0,len(self.jaoutlist.curselection())):
 			print(self.jaoutlist.get(self.jaoutlist.curselection()[i]))
@@ -365,6 +435,7 @@ class MES_GUI:
 		jack.deactivate()
 
 	def testButtonClick(self):
+		self.generate_signal[self.sisecb.get()]()
 		time.sleep(0.5)
 		for i in range(0,int(self.siavg.get())):
 			if(self.IsPyAudio()):
@@ -372,18 +443,27 @@ class MES_GUI:
 			if(self.IsPyJack()):
 				self.TestPyJack()
 		
+	def getImpFilename(self):
+		return self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
+
+	def getSigFilename(self):
+		return self.filepath.get()+os.sep+self.prefix.get()+'_SIG_'+self.counter.get()+'.wav'
+	def getRawFilename(self, avg):
+		return self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(avg)+'.wav'
+
 	def mesButtonClick(self):
+		self.generate_signal[self.sisecb.get()]()
 		self.cursiavg=int(self.siavg.get())
 		filenotexists=True
 		if self.impcheck.get():
-			impfile=self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
+			impfile=self.getImpFilename()
 			if os.path.isfile(impfile):
 				messagebox.showerror('Datei existiert bereits', 'Die Datei '+impfile+' existiert Bereits!')
 				filenotexists=False
 		if self.rawcheck.get():
 			print('rawcheck')
 			for i in range(0,int(self.siavg.get())):
-				rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(i)+'.wav'
+				rawfile=self.getRawFilename(i)
 				print('in loop')
 				if os.path.isfile(rawfile):
 					messagebox.showerror('Datei existiert bereits', 'Die Datei '+rawfile+' existiert Bereits!')
@@ -391,7 +471,7 @@ class MES_GUI:
 					filenotexists=False
 					break
 		if self.sigcheck.get():
-			sigfile=self.filepath.get()+os.sep+self.prefix.get()+'_SIG_'+self.counter.get()+'.wav'
+			sigfile=self.getSigFilename 
 			if os.path.isfile(sigfile):
 				messagebox.showerror('Datei existiert bereits', 'Die Datei '+sigfile+' existiert Bereits!')
 				filenotexists=False
@@ -411,7 +491,6 @@ class MES_GUI:
 		OCHANNELS=len(self.jaoutlist.curselection())
 		ICHANNELS=len(self.jainplist.curselection())
 		self.fs = float(jack.get_sample_rate())
-		self.generate_signal[self.sisecb.get()]()
 		jack.activate()
 
 		# Register and Connect Output Ports
@@ -462,7 +541,6 @@ class MES_GUI:
 
 
 	def MesPyAudio(self):
-		self.generate_signal[self.sisecb.get()]()
 		outputdev = self.aodevlist[self.aodevcb.get()]
 		inputdev = self.aidevlist[self.aidevcb.get()]
 		OCHANNELS=int(self.nooccb.get())
@@ -492,7 +570,7 @@ class MES_GUI:
 		ostream.start_stream()
 
 		#while istream.is_active():
-	#		time.sleep(0.1)
+		#		time.sleep(0.1)
 		while ostream.is_active():
 			self.record.append(istream.read(BUFFER))
 			#time.sleep(0.1)
@@ -556,6 +634,10 @@ class MES_GUI:
 		print('not implemented yet')
 	def sawtoothgen(self):
 		print('not implemented yet')
+	def mlsgen(self):
+		self.signal=10**(float(self.level.get())/20)*mls.generate_mls(int(self.mlsn.get()),self.mlsflag.get())
+	def golaygen(self):
+		self.golaya, self.golayb=golay.generategolay(int(self.golayn.get()))
 	def selectpath(self):
 		filepath=filedialog.askdirectory()
 		print(filepath)
@@ -580,9 +662,9 @@ class MES_GUI:
 		else:
 			NFFT=int(NFFTsig)
 		sigfft=fft(self.signal,n=NFFT)
-		N=self.raw[0].shape[0]
+		N=self.average.shape[0]
 		avgfft=fftn(self.average,s=[NFFT])
-		imp=np.array(np.zeros(rawfft.shape))
+		imp=np.array(np.zeros(avgfft.shape))
 		for i in range(0,N):
 			imp[i,:]=np.real(fftshift(ifft(sigfft/avgfft[i,:])))
 		toSave=np.array(imp.transpose(), dtype=np.float32)
