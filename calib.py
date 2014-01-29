@@ -172,6 +172,7 @@ class CALIB_GUI:
 			for files in os.listdir(path):
 				if os.path.isfile(files) and (files.find(prefix)!=-1):
 					convfiles.append(files)
+
 		else:
 			print('everything has to be filled out')
 
