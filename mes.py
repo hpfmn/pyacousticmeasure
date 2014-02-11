@@ -159,7 +159,7 @@ class MES_GUI:
 		self.sisecb.bind('<<ComboboxSelected>>', self.signaltypechange)
 		self.sisecb.grid(row=1, column=1, sticky=tkinter.E+tkinter.W)
 		self.siavglabel = ttk.Label(self.siseframe, text="Wiederholungen")
-		self.siavglabel.grid(row=5, column=0, sticky=(tkinter.W))
+		self.siavglabel.grid(row=6, column=0, sticky=(tkinter.W))
 		self.siavg = tkinter.StringVar()
 		self.siavgent = ttk.Entry(self.siseframe, textvariable=self.siavg)
 		self.siavg.set('2')
@@ -207,6 +207,9 @@ class MES_GUI:
 		# Frame with widgets for noise
 		self.noiseframe = ttk.Frame(self.siseframe)
 
+
+		# General Settings
+		
 		self.levellabel= ttk.Label(self.siseframe, text='Pegel')
 		self.levellabel.grid(row=3, column=0, sticky=(tkinter.W))
 		self.level=tkinter.StringVar()
@@ -214,15 +217,24 @@ class MES_GUI:
 		self.level.set('-12')
 		self.levele.grid(row=3, column=1, sticky=tkinter.E+tkinter.W)
 
-		self.durlabel = ttk.Label(self.siseframe, text='Dauer')
-		self.durcb = ttk.Combobox(self.siseframe, values=(2**16/self.fs, 2**17/self.fs, 2**18/self.fs, 2**19/self.fs))
+		self.dur=tkinter.StringVar()
+		self.dur.trace('w',self.durchange)
+		self.durlabel = ttk.Label(self.siseframe, text='Dauer in Sekunden')
+		self.durcb = ttk.Combobox(self.siseframe, values=(2**16/self.fs, 2**17/self.fs, 2**18/self.fs, 2**19/self.fs),textvariable=self.dur)
 		self.durcb.current(1)
 		self.durlabel.grid(row=4, column=0, sticky=tkinter.W+tkinter.E)
 		self.durcb.grid(row=4, column=1, sticky=tkinter.E+tkinter.W)
 
+		self.dursp=tkinter.StringVar()
+		self.dursp.trace('w',self.durspchange)
+		self.dursplabel = ttk.Label(self.siseframe, text='Dauer in Samples')
+		self.durspcb = ttk.Combobox(self.siseframe, values=(2**16, 2**17, 2**18, 2**19), textvariable=self.dursp)
+		self.durspcb.current(1)
+		self.dursplabel.grid(row=5, column=0, sticky=tkinter.W+tkinter.E)
+		self.durspcb.grid(row=5, column=1, sticky=tkinter.E+tkinter.W)
+
 		self.testbutton = ttk.Button(self.siseframe, text='Test', command=self.testButtonClick)
 		self.testbutton.grid(row=6, column=0, columnspan=2)
-
 
 		#Frame for MLS
 		self.mlsframe= ttk.Frame(self.siseframe)
@@ -687,6 +699,12 @@ class MES_GUI:
 	def generateImpulseIR(self):
 		toSave=np.array(self.average,dtype=np.float32)
 		scipy.io.wavfile.write(self.getImpFilename(),int(self.fs),toSave.transpose())
+	def durspchange(self,name,index,mode):
+		sec=int(self.dursp.get())/self.fs
+		self.dur.set(str(sec))
+	def durchange(self,name,index,mode):
+		samp=float(self.dur.get())*self.fs
+		self.dursp.set(str(int(samp)))
 
 root = tkinter.Tk()
 mes_gui = MES_GUI(root)
