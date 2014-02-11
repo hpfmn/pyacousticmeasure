@@ -150,6 +150,9 @@ class MES_GUI:
 		self.siseframe.rowconfigure(3, weight=1)
 		self.siseframe.rowconfigure(4, weight=1)
 		self.siseframe.rowconfigure(5, weight=1)
+		self.siseframe.rowconfigure(6, weight=1)
+		self.siseframe.rowconfigure(7, weight=1)
+		self.siseframe.rowconfigure(8, weight=1)
 
 		self.siselabel = ttk.Label(self.siseframe, text='Signal', width=20)
 		self.siselabel.grid(row=1, column=0, sticky=(tkinter.W))
@@ -158,13 +161,9 @@ class MES_GUI:
 		self.sisecb.current(newindex=0)
 		self.sisecb.bind('<<ComboboxSelected>>', self.signaltypechange)
 		self.sisecb.grid(row=1, column=1, sticky=tkinter.E+tkinter.W)
-		self.siavglabel = ttk.Label(self.siseframe, text="Wiederholungen")
-		self.siavglabel.grid(row=6, column=0, sticky=(tkinter.W))
-		self.siavg = tkinter.StringVar()
-		self.siavgent = ttk.Entry(self.siseframe, textvariable=self.siavg)
-		self.siavg.set('2')
-		self.siavgent.grid(row=5,column=1, sticky=tkinter.E+tkinter.W)
+
 		# Frame with widgets for sweep
+		
 		self.sweepframe = ttk.Frame(self.siseframe)
 		self.f0label = ttk.Label(self.sweepframe, text='Startfrequenz', width=20)
 		self.f0label.grid(row=0, column=0, sticky=(tkinter.W))
@@ -232,9 +231,25 @@ class MES_GUI:
 		self.durspcb.current(1)
 		self.dursplabel.grid(row=5, column=0, sticky=tkinter.W+tkinter.E)
 		self.durspcb.grid(row=5, column=1, sticky=tkinter.E+tkinter.W)
+		
+		self.siavglabel = ttk.Label(self.siseframe, text="Wiederholungen")
+		self.siavglabel.grid(row=6, column=0, sticky=(tkinter.W))
+		self.siavg = tkinter.StringVar()
+		self.siavgent = ttk.Entry(self.siseframe, textvariable=self.siavg)
+		self.siavg.set('2')
+		self.siavgent.grid(row=6,column=1, sticky=tkinter.E+tkinter.W)
+
+		self.delaylabel = ttk.Label(self.siseframe, text='Verzögerung in Samples')
+		self.delay=tkinter.StringVar()
+		self.delay.set(str(0))
+		self.delaye= ttk.Entry(self.siseframe, textvariable=self.delay)
+		self.delaylabel.grid(row=7,column=0, sticky=tkinter.W+tkinter.E)
+		self.delaye.grid(row=7,column=1, sticky=tkinter.W+tkinter.E)
 
 		self.testbutton = ttk.Button(self.siseframe, text='Test', command=self.testButtonClick)
-		self.testbutton.grid(row=6, column=0, columnspan=2)
+		self.testbutton.grid(row=8, column=0)
+		self.testbutton = ttk.Button(self.siseframe, text='Verzögerung bestimmen', command=self.delayButtonClick)
+		self.testbutton.grid(row=8, column=1)
 
 		#Frame for MLS
 		self.mlsframe= ttk.Frame(self.siseframe)
@@ -265,6 +280,7 @@ class MES_GUI:
 		self.golayncb.current(12)
 		self.golaynlabel.grid(row=0,column=0, sticky=tkinter.W)
 		self.golayncb.grid(row=0,column=1, sticky=tkinter.W+tkinter.E)
+		self.golaycount='a'
 
 		# Fileframe
 		self.fileframe = ttk.LabelFrame(self.myParent,text="Dateien")
@@ -351,15 +367,21 @@ class MES_GUI:
 		self.sweepframe.grid_remove()
 		self.durcb.grid_remove()
 		self.durlabel.grid_remove()
+		self.durspcb.grid_remove()
+		self.dursplabel.grid_remove()
 		if self.sisecb.get() == 'Sweep':
 			self.sweepframe.grid(row=2,column=0, columnspan=2)
 			self.durlabel.grid(row=4, column=0, sticky=tkinter.W+tkinter.E)
 			self.durcb.grid(row=4, column=1, sticky=tkinter.E+tkinter.W)
+			self.dursplabel.grid(row=5, column=0, sticky=tkinter.W+tkinter.E)
+			self.durspcb.grid(row=5, column=1, sticky=tkinter.E+tkinter.W)
 			self.siseframe.rowconfigure(2, weight=5)
 		if self.sisecb.get() == 'Rauschen':
 			self.noiseframe.grid(row=2,column=0, columnspan=2)
 			self.durlabel.grid(row=4, column=0, sticky=tkinter.W+tkinter.E)
 			self.durcb.grid(row=4, column=1, sticky=tkinter.E+tkinter.W)
+			self.dursplabel.grid(row=5, column=0, sticky=tkinter.W+tkinter.E)
+			self.durspcb.grid(row=5, column=1, sticky=tkinter.E+tkinter.W)
 		if self.sisecb.get() == 'MLS':
 			self.mlsframe.grid(row=2,column=0, columnspan=2, sticky=tkinter.W+tkinter.E+tkinter.N+tkinter.S)
 			self.siseframe.rowconfigure(2, weight=3)
@@ -369,6 +391,8 @@ class MES_GUI:
 		if self.sisecb.get() == 'Impuls':
 			self.durlabel.grid(row=4, column=0, sticky=tkinter.W+tkinter.E)
 			self.durcb.grid(row=4,column=1,sticky=tkinter.E+tkinter.W)
+			self.dursplabel.grid(row=5, column=0, sticky=tkinter.W+tkinter.E)
+			self.durspcb.grid(row=5,column=1,sticky=tkinter.E+tkinter.W)
 
 	def fschange(self, event):
 		fsold=self.fs
@@ -462,13 +486,17 @@ class MES_GUI:
 		return self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
 
 	def getSigFilename(self):
-		return self.filepath.get()+os.sep+self.prefix.get()+'_SIG_'+self.counter.get()+'.wav'
+		if self.sisecb.get()=='Golay':
+			return self.filepath.get()+os.sep+self.prefix.get()+'_SIG'+self.golaycount+'_'+self.counter.get()+'.wav'
+		else:
+			return self.filepath.get()+os.sep+self.prefix.get()+'_SIG_'+self.counter.get()+'.wav'
 	def getRawFilename(self, avg):
-		return self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(avg)+'.wav'
+		if self.sisecb.get()=='Golay':
+			return self.filepath.get()+os.sep+self.prefix.get()+'_RAW'+self.golaycount+'_'+self.counter.get()+'_AVG_'+str(avg)+'.wav'
+		else:
+			return self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(avg)+'.wav'
 
-	def mesButtonClick(self):
-		self.generate_signal[self.sisecb.get()]()
-		self.cursiavg=int(self.siavg.get())
+	def filenotexistscheck(self):
 		filenotexists=True
 		if self.impcheck.get():
 			impfile=self.getImpFilename()
@@ -490,17 +518,48 @@ class MES_GUI:
 			if os.path.isfile(sigfile):
 				messagebox.showerror('Datei existiert bereits', 'Die Datei '+sigfile+' existiert Bereits!')
 				filenotexists=False
+		return filenotexists
+			
+	def mesButtonClick(self):
+		self.generate_signal[self.sisecb.get()]()
+		self.cursiavg=int(self.siavg.get())
+		self.golaycount='a'
+		filenotexists=self.filenotexistscheck()
 		if filenotexists:
 			time.sleep(0.5)
-			for i in range(int(self.siavg.get())):
-				if(self.IsPyAudio()):
-					self.MesPyAudio()
-				if(self.IsPyJack()):
-					self.MesPyJack()
-			if self.sigcheck.get():
-				toSave=np.array(self.signal.transpose(),dtype=('float32'))
-				scipy.io.wavfile.write(sigfile,int(self.fs),toSave)
-			self.inccounter()
+			if self.sisecb.get()=='Golay':
+				self.golaycount='b'
+				filenotexists=self.filenotexistscheck()
+				if filenotexists:
+					self.signal=self.golaya
+					self.golaycount='a'
+					for i in range(int(self.siavg.get())):
+						if(self.IsPyAudio()):
+							self.MesPyAudio()
+						if(self.IsPyJack()):
+							self.MesPyJack()
+					self.rawgolaya=self.raw
+					self.raw=[]
+					self.cursiavg=int(selfsiavg.get())
+					self.signal=self.golayb
+					self.golaycount='b'
+					for i in range(int(self.siavg.get())):
+						if(self.IsPyAudio()):
+							self.MesPyAudio()
+						if(self.IsPyJack()):
+							self.MesPyJack()
+					self.rawgolayb=self.raw
+					self.inccounter()
+			else:
+				for i in range(int(self.siavg.get())):
+					if(self.IsPyAudio()):
+						self.MesPyAudio()
+					if(self.IsPyJack()):
+						self.MesPyJack()
+				if self.sigcheck.get():
+					toSave=np.array(self.signal.transpose(),dtype=('float32'))
+					scipy.io.wavfile.write(sigfile,int(self.fs),toSave)
+				self.inccounter()
 	
 	def MesPyJack(self):
 		OCHANNELS=len(self.jaoutlist.curselection())
@@ -705,6 +764,8 @@ class MES_GUI:
 	def durchange(self,name,index,mode):
 		samp=float(self.dur.get())*self.fs
 		self.dursp.set(str(int(samp)))
+	def delayButtonClick(self):
+		pass
 
 root = tkinter.Tk()
 mes_gui = MES_GUI(root)
