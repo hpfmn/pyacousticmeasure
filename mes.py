@@ -153,8 +153,8 @@ class MES_GUI:
 
 		self.siselabel = ttk.Label(self.siseframe, text='Signal', width=20)
 		self.siselabel.grid(row=1, column=0, sticky=(tkinter.W))
-		self.sisecb = ttk.Combobox(self.siseframe, values=('Sweep', 'MLS', 'Golay','Rauschen', 'Sinus', 'Rechteck', 'Sägezahn'), state='readonly')
-		self.generate_signal={'Sweep' : self.sweepgen, 'Rauschen': self.noisegen, 'MLS': self.mlsgen, 'Golay': self.golaygen,'Sinus': self.singen, 'Rechteck': self.squaregen, 'Sägezahn': self.sawtoothgen}
+		self.sisecb = ttk.Combobox(self.siseframe, values=('Sweep', 'MLS', 'Golay', 'Impuls', 'Rauschen', 'Sinus', 'Rechteck', 'Sägezahn'), state='readonly')
+		self.generate_signal={'Sweep' : self.sweepgen, 'Rauschen': self.noisegen, 'MLS': self.mlsgen, 'Golay': self.golaygen,'Sinus': self.singen, 'Rechteck': self.squaregen, 'Sägezahn': self.sawtoothgen, 'Impuls': self.impulsegen}
 		self.sisecb.current(newindex=0)
 		self.sisecb.bind('<<ComboboxSelected>>', self.signaltypechange)
 		self.sisecb.grid(row=1, column=1, sticky=tkinter.E+tkinter.W)
@@ -354,6 +354,9 @@ class MES_GUI:
 		if self.sisecb.get() == 'Golay':
 			self.golayframe.grid(row=2,column=0, columnspan=2, sticky=tkinter.W+tkinter.E+tkinter.N+tkinter.S)
 			self.siseframe.rowconfigure(2, weight=1)
+		if self.sisecb.get() == 'Impuls':
+			self.durlabel.grid(row=4, column=0, sticky=tkinter.W+tkinter.E)
+			self.durcb.grid(row=4,column=1,sticky=tkinter.E+tkinter.W)
 
 	def fschange(self, event):
 		fsold=self.fs
@@ -471,7 +474,7 @@ class MES_GUI:
 					filenotexists=False
 					break
 		if self.sigcheck.get():
-			sigfile=self.getSigFilename 
+			sigfile=self.getSigFilename()
 			if os.path.isfile(sigfile):
 				messagebox.showerror('Datei existiert bereits', 'Die Datei '+sigfile+' existiert Bereits!')
 				filenotexists=False
@@ -524,7 +527,7 @@ class MES_GUI:
 		jack.deactivate()
 
 		if self.rawcheck.get():
-			rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(int(self.siavg)-self.cursiavg)+'.wav'
+			rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(int(self.siavg.get())-self.cursiavg)+'.wav'
 			toSave = np.array(input.transpose(),dtype=('float32'))	
 			scipy.io.wavfile.write(rawfile,int(self.fs), toSave)
 			print(rawfile+' saved')
@@ -638,6 +641,9 @@ class MES_GUI:
 		self.signal=10**(float(self.level.get())/20)*mls.generate_mls(int(self.mlsn.get()),self.mlsflag.get())
 	def golaygen(self):
 		self.golaya, self.golayb=golay.generategolay(int(self.golayn.get()))
+	def impulsegen(self):
+		self.signal=np.zeros(int(float(self.durcb.get())*self.fs))
+		self.signal[0]=10**(float(self.level.get())/20)
 	def selectpath(self):
 		filepath=filedialog.askdirectory()
 		print(filepath)
@@ -645,13 +651,15 @@ class MES_GUI:
 			self.filepath.set(filepath)
 	def generateIR(self):
 		# Average Data
-		self.average=raw[0]
-		for i in range(1,len(raw)):
-			self.average=self.average+raw[i]
-		self.average=self.average/len(raw)
+		self.average=self.raw[0]
+		for i in range(1,len(self.raw)):
+			self.average=self.average+self.raw[i]
+		self.average=self.average/len(self.raw)
 
 		if self.sisecb.get()=='Sweep':
 			self.generateSweepIR()
+		if self.sisecb.get()=='Impuls':
+			self.generateImpulseIR()
 	def generateSweepIR(self):
 		Lsig=len(self.signal)
 		Lraw=len(self.average[0,:])
@@ -676,6 +684,10 @@ class MES_GUI:
 		i=int(self.counter.get())
 		i+=1
 		self.counter.set('0'*(len(self.counter.get())-len(str(i)))+str(i))
+	def generateImpulseIR(self):
+		toSave=np.array(self.average,dtype=np.float32)
+		scipy.io.wavfile.write(self.getImpFilename(),int(self.fs),toSave.transpose())
+
 root = tkinter.Tk()
 mes_gui = MES_GUI(root)
 root.mainloop()
