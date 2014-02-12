@@ -33,7 +33,7 @@ except Exception as e:
 
 p = pyaudio.PyAudio()
 
-FORMAT=pyaudio.paInt16
+FORMAT=pyaudio.paFloat32
 
 hostapis=dict()
 for i in range(0,p.get_host_api_count()):
@@ -441,8 +441,9 @@ class MES_GUI:
 				rate=self.fs,
 				output=True,
 				output_device_index=outputdev)
-		self.outputsignal=np.repeat(self.signal, CHANNELS)*(2**15-1)
-		stream.write(self.outputsignal.astype(np.int16).tostring())
+		#self.outputsignal=np.repeat(self.signal, CHANNELS)*(2**15-1)
+		self.outputsignal=np.repeat(self.signal, CHANNELS)
+		stream.write(self.outputsignal.astype(np.float32).tostring())
 
 		stream.stop_stream()
 		stream.close()
@@ -627,8 +628,8 @@ class MES_GUI:
 		inputdev = self.aidevlist[self.aidevcb.get()]
 		OCHANNELS=int(self.nooccb.get())
 		ICHANNELS=int(self.noiccb.get())
-		BUFFER=1024
-		self.outputsignal=np.repeat(self.signal, OCHANNELS)*(2**15-1)
+		BUFFER=int(1024)
+		self.outputsignal=np.repeat(self.signal, OCHANNELS)#*(2**15-1)
 		#self.outputsignal=self.signal*(2**15-1)
 		self.plpos = 0
 		
@@ -642,14 +643,19 @@ class MES_GUI:
 				channels=ICHANNELS,
 				rate=self.fs,
 				input=True,
-				input_device_index=inputdev)
+				#output=True,
+				#output_device_index=outputdev,
+				input_device_index=inputdev,
+				frames_per_buffer=BUFFER)
+				#stream_callback=self.get_recb())
 
 		self.record=[]
 		#ostream.write(self.outputsignal.astype(np.int16).tostring())
 		#for i in np.arange(0,len(self.outputsignal)-BUFFER, BUFFER):
-			#record.append(istream.read(BUFFER))
-			#istream.write(outputsignal[i:i+BUFFER].astype(np.int16).tostring(), BUFFER)
+			#self.record.append(istream.read(BUFFER))
+			#istream.write(self.outputsignal[i:i+BUFFER].astype(np.float32).tostring(), BUFFER)
 		ostream.start_stream()
+		istream.start_stream()
 
 		#while istream.is_active():
 		#		time.sleep(0.1)
@@ -657,31 +663,39 @@ class MES_GUI:
 			self.record.append(istream.read(BUFFER))
 			#time.sleep(0.1)
 
-		ostream.stop_stream()
-		ostream.close()
+		#ostream.stop_stream()
+		#ostream.close()
 		
 		istream.stop_stream()
 		istream.close()
 
+		# Convert to Numpy Array
+		x=np.fromstring(np.array(self.record),'Float32')
+		y=np.zeros((ICHANNELS,int(len(x)/ICHANNELS)))
+		for i in range(0,ICHANNELS):
+			y[i,:]=x[i::ICHANNELS]
+
 		# If selected save raw data as Wavfile
 		if self.rawcheck.get():
-			rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(int(self.siavg)-self.cursiavg)+'.wav'
-			wf = wave.open(rawfile, 'wb')
-			wf.setnchannels(ICHANNELS)
-			wf.setsampwidth(p.get_sample_size(FORMAT))
-			wf.setframerate(self.fs)
-			wf.writeframes(b''.join(self.record))
-			wf.close()
+			rawfile=self.getRawFilename(int(int(self.siavg.get())-self.cursiavg))#self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(int(self.siavg)-self.cursiavg)+'.wav'
+			#wf = wave.open(rawfile, 'wb')
+			#wf.setnchannels(ICHANNELS)
+			#wf.setsampwidth(p.get_sample_size(FORMAT))
+			#wf.setframerate(self.fs)
+			#wf.writeframes(b''.join(self.record))
+			#wf.close()
+			toSave=np.array(y,dtype=np.float32)
+			scipy.io.wavfile.write(rawfile,self.fs,toSave.transpose())
 		self.cursiavg-=1
 
 		# Convert to Numpy array and add to temp raw list
-		if self.imgcheck.get():
-			MAX_y = 2.0**(p.get_sample_size(FORMAT) * 8 - 1)
-			y = np.array(struct.unpack("%dh" % (BUFFER * ICHANNELS), self.record)) / MAX_y
-			x = np.array
-			for i in range(0,ICHANNELS):
-				x[i,:]=y[i::ICHANNELS]
-			self.raw.append(x)
+		if self.impcheck.get():
+			#MAX_y = 2.0**(p.get_sample_size(FORMAT) * 8 - 1)
+			#y = np.array(struct.unpack("%dh" % (BUFFER * ICHANNELS), self.record)) / MAX_y
+			#x = np.array
+			#for i in range(0,ICHANNELS):
+			#	x[i,:]=y[i::ICHANNELS]
+			self.raw.append(y)
 			print('raw appened')
 
 		if (self.cursiavg==0) & self.impcheck.get():
@@ -689,7 +703,7 @@ class MES_GUI:
 
 	def get_plcb(self):
 		def plcb(in_data, frame_count, time_info, status):
-			data = self.outputsignal[self.plpos:self.plpos+frame_count].astype(np.int16).tostring()
+			data = self.outputsignal[self.plpos:self.plpos+frame_count].astype(np.float32).tostring()
 			self.plpos += frame_count
 			return(data, pyaudio.paContinue)
 		return plcb
