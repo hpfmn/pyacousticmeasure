@@ -1,16 +1,24 @@
-import tkinter
-import tkinter.messagebox as messagebox
+# coding=utf8
+import os
+import sys
+if sys.version_info<(3,0,0):
+	import Tkinter as tkinter
+	import tkMessageBox as messagebox
+	import tkFileDialog as filedialog
+	import ttk as ttk
+else:
+	import tkinter
+	import tkinter.messagebox as messagebox
+	import tkinter.ttk as ttk
+	import tkinter.filedialog as filedialog
 import jack
 import time
-import tkinter.ttk as ttk
-import tkinter.filedialog as filedialog
 import pyaudio
 import numpy as np
 import scipy
 import scipy.signal
 import scipy.io.wavfile
 import wave
-import os
 from numpy.fft import fft,ifft,fftshift,ifftshift,fftn,ifftn
 import pysoundfile
 import golay
@@ -156,7 +164,7 @@ class MES_GUI:
 
 		self.siselabel = ttk.Label(self.siseframe, text='Signal', width=20)
 		self.siselabel.grid(row=1, column=0, sticky=(tkinter.W))
-		self.sisecb = ttk.Combobox(self.siseframe, values=('Sweep', 'MLS', 'Golay', 'Impuls', 'Rauschen', 'Sinus', 'Rechteck', 'Sägezahn'), state='readonly')
+		self.sisecb = ttk.Combobox(self.siseframe, values=('Sweep', 'MLS', 'Golay', 'Impuls', 'Rauschen', 'Sinus', 'Rechteck', 'Sägezahn'.decode('utf8','ignore')), state='readonly')
 		self.generate_signal={'Sweep' : self.sweepgen, 'Rauschen': self.noisegen, 'MLS': self.mlsgen, 'Golay': self.golaygen,'Sinus': self.singen, 'Rechteck': self.squaregen, 'Sägezahn': self.sawtoothgen, 'Impuls': self.impulsegen}
 		self.sisecb.current(newindex=0)
 		self.sisecb.bind('<<ComboboxSelected>>', self.signaltypechange)
@@ -219,8 +227,8 @@ class MES_GUI:
 		self.dur=tkinter.StringVar()
 		self.dur.trace('w',self.durchange)
 		self.durlabel = ttk.Label(self.siseframe, text='Dauer in Sekunden')
-		self.durcb = ttk.Combobox(self.siseframe, values=(2**16/self.fs, 2**17/self.fs, 2**18/self.fs, 2**19/self.fs),textvariable=self.dur)
-		self.durcb.current(1)
+		self.durcb = ttk.Combobox(self.siseframe, values=(),textvariable=self.dur)
+		#self.durcb.current(1)
 		self.durlabel.grid(row=4, column=0, sticky=tkinter.W+tkinter.E)
 		self.durcb.grid(row=4, column=1, sticky=tkinter.E+tkinter.W)
 
@@ -762,8 +770,9 @@ class MES_GUI:
 		sec=int(self.dursp.get())/self.fs
 		self.dur.set(str(sec))
 	def durchange(self,name,index,mode):
-		samp=float(self.dur.get())*self.fs
-		self.dursp.set(str(int(samp)))
+		pass
+		#samp=float(self.dur.get())*self.fs
+		#self.dursp.set(str(int(samp)))
 	def delayButtonClick(self):
 		pass
 
