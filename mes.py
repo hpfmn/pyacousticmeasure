@@ -164,7 +164,7 @@ class MES_GUI:
 
 		self.siselabel = ttk.Label(self.siseframe, text='Signal', width=20)
 		self.siselabel.grid(row=1, column=0, sticky=(tkinter.W))
-		self.sisecb = ttk.Combobox(self.siseframe, values=('Sweep', 'MLS', 'Golay', 'Impuls', 'Rauschen', 'Sinus', 'Rechteck', 'Sägezahn'.decode('utf8','ignore')), state='readonly')
+		self.sisecb = ttk.Combobox(self.siseframe, values=('Sweep', 'MLS', 'Golay', 'Impuls', 'Rauschen', 'Sinus', 'Rechteck', u'Sägezahn'), state='readonly')
 		self.generate_signal={'Sweep' : self.sweepgen, 'Rauschen': self.noisegen, 'MLS': self.mlsgen, 'Golay': self.golaygen,'Sinus': self.singen, 'Rechteck': self.squaregen, 'Sägezahn': self.sawtoothgen, 'Impuls': self.impulsegen}
 		self.sisecb.current(newindex=0)
 		self.sisecb.bind('<<ComboboxSelected>>', self.signaltypechange)
@@ -631,9 +631,9 @@ class MES_GUI:
 			print(rawfile+' saved')
 		self.cursiavg-=1
 
-		if self.impcheck.get():
-			self.raw.append(input)
-			print('append to raw')
+		#if self.impcheck.get():
+		self.raw.append(input)
+		print('PyJack: append to raw')
 
 		if (self.cursiavg==0) and (self.impcheck.get()):
 			self.generateIR()
@@ -707,14 +707,14 @@ class MES_GUI:
 		self.cursiavg-=1
 
 		# Convert to Numpy array and add to temp raw list
-		if self.impcheck.get():
+		#if self.impcheck.get():
 			#MAX_y = 2.0**(p.get_sample_size(FORMAT) * 8 - 1)
 			#y = np.array(struct.unpack("%dh" % (BUFFER * ICHANNELS), self.record)) / MAX_y
 			#x = np.array
 			#for i in range(0,ICHANNELS):
 			#	x[i,:]=y[i::ICHANNELS]
-			self.raw.append(y)
-			print('raw appened')
+		self.raw.append(y)
+		print('PyAudio: raw appened')
 
 		if (self.cursiavg==0) & self.impcheck.get():
 			self.generateIR()
@@ -783,7 +783,7 @@ class MES_GUI:
 		elif self.sisecb.get()=='MLS':
 			self.generateMLSIR()
 		else:
-			messagebox.showerror('Für '.decode('utf8',ignore)+self.sisecb.get()+' steht kein IR Generator zur Verfügung'.decode('utf8',ignore))
+			messagebox.showerror(u'Für '+self.sisecb.get()+u' steht kein IR Generator zur Verfügung')
 	def generateSweepIR(self):
 		Lsig=len(self.signal)
 		Lavg=len(self.average[0,:])
@@ -820,7 +820,17 @@ class MES_GUI:
 		#samp=float(self.dur.get())*self.fs
 		#self.dursp.set(str(int(samp)))
 	def delayButtonClick(self):
-		pass
+		impstat=self.impcheck.get()
+		rawstat=self.rawcheck.get()
+		sigstat=self.sigcheck.get()
+		siavgstat=self.siavg.get()
+		self.impcheck.set(0)
+		self.rawcheck.set(0)
+		self.sigcheck.set(0)
+		self.siavg.set("1")
+		raw=[]
+		self.generate_signal['Impuls']()
+
 	def generateGolayIR(self):
 		if self.golaycount=='b':
 			self.respgolayb=self.average
@@ -841,6 +851,12 @@ class MES_GUI:
 			print(self.golaycount)
 	def generateMLSIR(self):
 		imp=mls.generateIR_MLS(self.average,self.signal/max(self.signal),int(self.mlsn.get()))
+		toSave=np.array(imp.transpose(),dtype=np.float32)
+		impfile=self.getImpFilename()
+		scipy.io.wvfile.write(impfile,int(self.fs),toSave)
+		raw=[]
+		imp=[]
+
 
 root = tkinter.Tk()
 mes_gui = MES_GUI(root)
