@@ -23,6 +23,7 @@ from numpy.fft import fft,ifft,fftshift,ifftshift,fftn,ifftn
 import pysoundfile
 import golay
 import mls
+from gensweeps_arbitrary_spectrum import generate_spectralsweeep
 
 
 jack_running=True
@@ -184,16 +185,16 @@ class MES_GUI:
 		
 		self.f1label = ttk.Label(self.sweepframe, text='Endfrequenz')
 		self.f1label.grid(row=1, column=0, sticky=(tkinter.W))
-		
-		self.f1 = tkinter.StringVar() 
+		self.f1 = tkinter.IntVar() 
 		self.f1e = ttk.Entry(self.sweepframe, textvariable=self.f1)
-		self.f1.set('20000')
+		self.f1.set(20000)
+		self.f1.trace('w',self.f1change)
 		self.f1e.grid(row=1, column=1, sticky=tkinter.E+tkinter.W)
 
 		self.sweepmethodlabel = ttk.Label(self.sweepframe, text='Methode')
 		self.sweepmethodlabel.grid(row=2,column=0, sticky=tkinter.W+tkinter.E)
 
-		self.sweepmethodcb = ttk.Combobox(self.sweepframe, values=('logarithmic', 'linear', 'quadratic'), state='readonly')
+		self.sweepmethodcb = ttk.Combobox(self.sweepframe, values=('logarithmisch', 'linear'), state='readonly')
 		self.sweepmethodcb.current(0)
 		self.sweepmethodcb.grid(row=2,column=1, sticky=tkinter.E+tkinter.W)
 		self.sweepgenkindlb=ttk.Label(self.sweepframe, text='Generatorart')
@@ -202,6 +203,17 @@ class MES_GUI:
 		self.sweepgenkindlb.grid(row=3,column=0, sticky=(tkinter.W))
 		self.sweepgenkindcb.grid(row=3,column=1, sticky=tkinter.E+tkinter.W)
 
+		self.sweepstartlabel=ttk.Label(self.sweepframe, text='Startzeit in Samples')
+		self.sweepstart=tkinter.IntVar()
+		self.sweepstarte=ttk.Entry(self.sweepframe, textvariable=self.sweepstart)
+		self.sweepstartlabel.grid(row=4,column=0, sticky=(tkinter.W))
+		self.sweepstarte.grid(row=4,column=1, sticky=tkinter.E+tkinter.W)
+
+		self.sweependlabel=ttk.Label(self.sweepframe, text='Endzeit in Samples')
+		self.sweepend=tkinter.IntVar()
+		self.sweepende=ttk.Entry(self.sweepframe, textvariable=self.sweepend)
+		self.sweependlabel.grid(row=5,column=0, sticky=(tkinter.W))
+		self.sweepende.grid(row=5,column=1, sticky=tkinter.E+tkinter.W)
 
 		self.sweepframe.grid(row=2, column=0, columnspan=2, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
 		self.sweepframe.columnconfigure(0, weight=1)
@@ -343,9 +355,12 @@ class MES_GUI:
 
 		self.mesbutton = ttk.Button(self.fileframe, text='Messen', command=self.mesButtonClick)
 		self.mesbutton.grid(row=3,column=0, sticky=tkinter.W+tkinter.E)
+		self.actsweepend()
 
 
 
+	def actsweepend(self):
+		self.sweepend.set(int(int(self.dursp.get())-np.ceil(((1.0/int(self.f1.get()))*self.fs)/2)))
 
 	def hostapichange(self, event):
 		host_api_index=hostapis[self.adrvcb.get()]
@@ -739,15 +754,31 @@ class MES_GUI:
 		return recb
 
 	def sweepgen(self):
-		step=1.0/self.fs
-		t1 = float(float(self.dursp.get())/self.fs)
-		print(t1)
-		print(self.dursp.get())
-		t = np.arange(0,t1+step, step)
-		f0 = float(self.f0e.get())
-		f1 = float(self.f1e.get())
+		if self.sweepkindcb.get()=='Zeitbereich':
+			step=1.0/self.fs
+			dur = float(float(self.dursp.get())/self.fs)
+			t1=self.sweepend.get()/float(self.fs)
+			print(t1)
+			print(self.dursp.get())
+			t = np.arange(0,dur, step)
+			f0 = float(self.f0e.get())
+			f1 = float(self.f1e.get())
 
-		self.signal=10**(float(self.level.get())/20)*scipy.signal.chirp(t,f0,t1,f1,method=self.sweepmethodcb.get(),phi=90)
+			if self.sweepmethodcb.get()=='logarithmisch':
+				method='logarithmic'
+			elif slef.sweepmethodcb.get()=='linear':
+				method='linear'
+			self.signal=10**(float(self.level.get())/20)*scipy.signal.chirp(t,f0,t1,f1,method=method,phi=-90)
+			self.signal[self.sweepend.get():]=0
+		elif self.sweepkindcb.get()=='Frequenzbereich':
+			tg_start=self.sweepstart/2/float(self.fs)
+			tg_end=self.sweepend.get()/2/float(self.fs)
+			if self.sweepmethodcb.get=='linear':
+				specfact=0
+			elif self.sweepmethodcd.get=='logarithmisch':
+				specfact=np.log2(10**(-3.0/20))
+				self.signal=generate_spectralsweep(self.fs,int(self.dursp.get()),tg_start,tg_end,int(self.f0.get()),int(self.f1.get()),specfact)
+				self.signal=10**(float(self.level.get())/20)*self.signal
 
 	def noisegen(self):
 		print('not implemented yet')
@@ -826,10 +857,13 @@ class MES_GUI:
 	def durspchange(self,name,index,mode):
 		sec=int(self.dursp.get())/self.fs
 		self.dur.set(str(sec))
+		self.actsweepend()
 	def durchange(self,name,index,mode):
 		pass
 		#samp=float(self.dur.get())*self.fs
 		#self.dursp.set(str(int(samp)))
+	def f1change(self,name,index,mode):
+		self.actsweepend()
 	def delayButtonClick(self):
 		self.cursiavg=int(self.siavg.get())
 		impstat=self.impcheck.get()
