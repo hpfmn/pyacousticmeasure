@@ -485,11 +485,28 @@ class MES_GUI:
 	def testButtonClick(self):
 		self.generate_signal[self.sisecb.get()]()
 		time.sleep(0.5)
-		for i in range(0,int(self.siavg.get())):
-			if(self.IsPyAudio()):
-				self.TestPyAudio()
-			if(self.IsPyJack()):
-				self.TestPyJack()
+		if self.sisecb.get()=='Golay':
+			self.signal=self.golaya
+			self.golaycount='a'
+			for i in range(int(self.siavg.get())):
+				if(self.IsPyAudio()):
+					self.TestPyAudio()
+				if(self.IsPyJack()):
+					self.TestPyJack()
+			self.signal=self.golayb
+			self.golaycount='b'
+			for i in range(int(self.siavg.get())):
+				if(self.IsPyAudio()):
+					self.TestPyAudio()
+				if(self.IsPyJack()):
+					self.TestPyJack()
+			self.golaycount='a'
+		else:
+			for i in range(0,int(self.siavg.get())):
+				if(self.IsPyAudio()):
+					self.TestPyAudio()
+				if(self.IsPyJack()):
+					self.TestPyJack()
 		
 	def getImpFilename(self):
 		return self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
@@ -530,6 +547,7 @@ class MES_GUI:
 		return filenotexists
 			
 	def mesButtonClick(self):
+		self.raw=[]
 		self.generate_signal[self.sisecb.get()]()
 		self.cursiavg=int(self.siavg.get())
 		self.golaycount='a'
@@ -547,9 +565,9 @@ class MES_GUI:
 							self.MesPyAudio()
 						if(self.IsPyJack()):
 							self.MesPyJack()
-					self.rawgolaya=self.raw
+					self.respgolaya=self.average
 					self.raw=[]
-					self.cursiavg=int(selfsiavg.get())
+					self.cursiavg=int(self.siavg.get())
 					self.signal=self.golayb
 					self.golaycount='b'
 					for i in range(int(self.siavg.get())):
@@ -557,7 +575,6 @@ class MES_GUI:
 							self.MesPyAudio()
 						if(self.IsPyJack()):
 							self.MesPyJack()
-					self.rawgolayb=self.raw
 					self.inccounter()
 			else:
 				for i in range(int(self.siavg.get())):
@@ -566,8 +583,9 @@ class MES_GUI:
 					if(self.IsPyJack()):
 						self.MesPyJack()
 				if self.sigcheck.get():
+					sigfile=self.getSigFilename()
 					toSave=np.array(self.signal.transpose(),dtype=('float32'))
-					scipy.io.wavfile.write(sigfile,int(self.fs),toSave)
+					scipy.io.wavfile.write(sigfile,int(self.fs),toSave.transpose())
 				self.inccounter()
 	
 	def MesPyJack(self):
@@ -715,7 +733,9 @@ class MES_GUI:
 
 	def sweepgen(self):
 		step=1.0/self.fs
-		t1 = float(self.durcb.get())
+		t1 = float(float(self.dursp.get())/self.fs)
+		print(t1)
+		print(self.dursp.get())
 		t = np.arange(0,t1+step, step)
 		f0 = float(self.f0e.get())
 		f1 = float(self.f1e.get())
@@ -733,9 +753,11 @@ class MES_GUI:
 	def mlsgen(self):
 		self.signal=10**(float(self.level.get())/20)*mls.generate_mls(int(self.mlsn.get()),self.mlsflag.get())
 	def golaygen(self):
-		self.golaya, self.golayb=golay.generategolay(int(self.golayn.get()))
+		self.golaya, self.golayb=golay.generate_golay(int(self.golayn.get()))
+		self.golaya=(10**(float(self.level.get())/20))*self.golaya
+		self.golayb=(10**(float(self.level.get())/20))*self.golayb
 	def impulsegen(self):
-		self.signal=np.zeros(int(float(self.durcb.get())*self.fs))
+		self.signal=np.zeros(int(self.dursp.get()))
 		self.signal[0]=10**(float(self.level.get())/20)
 	def selectpath(self):
 		filepath=filedialog.askdirectory()
@@ -744,32 +766,42 @@ class MES_GUI:
 			self.filepath.set(filepath)
 	def generateIR(self):
 		# Average Data
+		self.average=np.array
 		self.average=self.raw[0]
 		for i in range(1,len(self.raw)):
 			self.average=self.average+self.raw[i]
+		print('raw length')
+		print(len(self.raw))
 		self.average=self.average/len(self.raw)
 
 		if self.sisecb.get()=='Sweep':
 			self.generateSweepIR()
-		if self.sisecb.get()=='Impuls':
+		elif self.sisecb.get()=='Impuls':
 			self.generateImpulseIR()
+		elif self.sisecb.get()=='Golay':
+			self.generateGolayIR()
+		elif self.sisecb.get()=='MLS':
+			self.generateMLSIR()
+		else:
+			messagebox.showerror('Für '.decode('utf8',ignore)+self.sisecb.get()+' steht kein IR Generator zur Verfügung'.decode('utf8',ignore))
 	def generateSweepIR(self):
 		Lsig=len(self.signal)
-		Lraw=len(self.average[0,:])
+		Lavg=len(self.average[0,:])
 		NFFTsig=nextpow2(Lsig)
 		NFFTavg=nextpow2(Lavg)
-		if NFFTsig != NFFTraw:
+		if NFFTsig != NFFTavg:
 			raise Exception('NFFTsig != NFFTavg')
 		else:
 			NFFT=int(NFFTsig)
 		sigfft=fft(self.signal,n=NFFT)
+		print(self.average.shape)
 		N=self.average.shape[0]
 		avgfft=fftn(self.average,s=[NFFT])
 		imp=np.array(np.zeros(avgfft.shape))
 		for i in range(0,N):
 			imp[i,:]=np.real(fftshift(ifft(sigfft/avgfft[i,:])))
 		toSave=np.array(imp.transpose(), dtype=np.float32)
-		impfile=self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
+		impfile=self.getImpFilename()#self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
 		scipy.io.wavfile.write(impfile,int(self.fs),toSave)
 		raw=[]
 		imp=[]
@@ -789,6 +821,26 @@ class MES_GUI:
 		#self.dursp.set(str(int(samp)))
 	def delayButtonClick(self):
 		pass
+	def generateGolayIR(self):
+		if self.golaycount=='b':
+			self.respgolayb=self.average
+			print('respa shape')
+			print(self.respgolaya.shape)
+			print('respb shape')
+			print(self.respgolayb.shape)
+			imp=np.zeros((respa.shape))
+			for i in range(respa.shape[0]):
+				imp[i,:]=golay.golayIR(self.respgolaya[i,:],self.respgolayb[i,:],self.golaya,self.golayb)
+			toSave=np.array(imp.transpose(),dtype=np.float32)
+			impfile=self.getImpFilename()
+			scipy.io.wvfile.write(impfile,int(self.fs),toSave)
+			raw=[]
+			imp=[]
+		else:
+			print('golaycount')
+			print(self.golaycount)
+	def generateMLSIR(self):
+		imp=mls.generateIR_MLS(self.average,self.signal/max(self.signal),int(self.mlsn.get()))
 
 root = tkinter.Tk()
 mes_gui = MES_GUI(root)

@@ -44,7 +44,7 @@ def generateIR_MLS(signal, mls, N):
 	sigshape=np.shape(signal)
 	resp=np.zeros(sigshape)
 	for i in range(0,sigshape[0]):
-		perm=PermuteSignal(signal,TagS,P)
+		perm=PermuteSignal(signal[i,:],TagS,P)
 		had=FastHadamard(perm,P+1,N)
 		resp[i,:]=PermuteResponse(had,tagL,P)
 	return resp

@@ -23,10 +23,9 @@ def generate_golay(N):
 from scipy.signal import fftconvolve
 import numpy as np
 def golayIR(respa, respb, a, b):
-	# Comptute impulse response h
+	# Comptute impulse response h for Signle Channel answers a and b
 	L = len(a)
 	h = np.array(zeros(respa.shape))
-	for i in range(0,respa.shape[0]):
-		h[i] = fftconvolve(a[-1::-1],respa[i])+fftconvolve(b[-1::-1], respb[i])
-		h[i] = h[i] / (2*L)
+	h = fftconvolve(a[-1::-1],respa,mode='same')+fftconvolve(b[-1::-1], respb,mode='same')
+	h = h / (2*L)
 	return h
