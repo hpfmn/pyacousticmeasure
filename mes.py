@@ -560,6 +560,8 @@ class MES_GUI:
 				filenotexists=self.filenotexistscheck()
 				if filenotexists:
 					self.signal=self.golaya
+					if int(self.delay.get())>0:
+						self.signal=np.concatenate((self.signal,np.zeros((int(self.delay.get())))))
 					self.golaycount='a'
 					for i in range(int(self.siavg.get())):
 						if(self.IsPyAudio()):
@@ -570,6 +572,8 @@ class MES_GUI:
 					self.raw=[]
 					self.cursiavg=int(self.siavg.get())
 					self.signal=self.golayb
+					if int(self.delay.get())>0:
+						self.signal=np.concatenate((self.signal,np.zeros((int(self.delay.get())))))
 					self.golaycount='b'
 					for i in range(int(self.siavg.get())):
 						if(self.IsPyAudio()):
@@ -578,6 +582,8 @@ class MES_GUI:
 							self.MesPyJack()
 					self.inccounter()
 			else:
+				if int(self.delay.get())>0:
+					self.signal=np.concatenate((self.signal,np.zeros((int(self.delay.get())))))
 				for i in range(int(self.siavg.get())):
 					if(self.IsPyAudio()):
 						self.MesPyAudio()
@@ -774,6 +780,10 @@ class MES_GUI:
 		print('raw length')
 		print(len(self.raw))
 		self.average=self.average/len(self.raw)
+		delay=int(self.delay.get())
+		if int(delay)>0:
+			self.average=self.average[:,delay:len(self.signal)]
+			self.signal=self.signal[:-delay]
 
 		if self.sisecb.get()=='Sweep':
 			self.generateSweepIR()
@@ -855,7 +865,11 @@ class MES_GUI:
 			print(self.respgolaya.shape)
 			print('respb shape')
 			print(self.respgolayb.shape)
-			imp=np.zeros((respa.shape))
+			delay=int(self.delay.get())
+			if int(delay)>0:
+				self.respgolaya=self.respgolaya[:,delay:len(self.signal)]
+				#self.respgolayb=self.respgolayb[:,delay:len(self.signal)]
+			imp=np.zeros((respgolaya.shape))
 			for i in range(respa.shape[0]):
 				imp[i,:]=golay.golayIR(self.respgolaya[i,:],self.respgolayb[i,:],self.golaya,self.golayb)
 			toSave=np.array(imp.transpose(),dtype=np.float32)
