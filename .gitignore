@@ -7,3 +7,4 @@ synctest/
 __pycache__/
 wavfiles/
 *.dia
+*.pyc
