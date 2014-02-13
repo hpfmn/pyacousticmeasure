@@ -1,0 +1,9 @@
+*.wav
+Messung_mit_audacity/
+sweep/
+synctest/
+.gitignore
+*.swp
+__pycache__/
+wavfiles/
+*.dia
