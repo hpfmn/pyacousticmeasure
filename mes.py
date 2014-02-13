@@ -24,6 +24,7 @@ import pysoundfile
 import golay
 import mls
 
+
 jack_running=True
 try:
 	jack.attach('measure')
@@ -820,16 +821,32 @@ class MES_GUI:
 		#samp=float(self.dur.get())*self.fs
 		#self.dursp.set(str(int(samp)))
 	def delayButtonClick(self):
+		self.cursiavg=int(self.siavg.get())
 		impstat=self.impcheck.get()
 		rawstat=self.rawcheck.get()
 		sigstat=self.sigcheck.get()
-		siavgstat=self.siavg.get()
 		self.impcheck.set(0)
 		self.rawcheck.set(0)
 		self.sigcheck.set(0)
-		self.siavg.set("1")
 		raw=[]
 		self.generate_signal['Impuls']()
+		if(self.IsPyAudio()):
+			self.MesPyAudio()
+		if(self.IsPyJack()):
+			self.MesPyJack()
+		print(self.raw[0].shape)
+		maximum=np.unravel_index(np.argmax(np.abs(self.raw[0])),self.raw[0].shape)
+		if len(maximum)==1:
+			pos=maximum[0]
+		else:
+			pos=maximum[1]
+		pos-=10
+		raw=[]
+		self.impcheck.set(impstat)
+		self.rawcheck.set(rawstat)
+		self.sigcheck.set(sigstat)
+		self.delay.set(str(pos))
+
 
 	def generateGolayIR(self):
 		if self.golaycount=='b':
