@@ -9,9 +9,12 @@ def find_nearest(array,value):
 	idx = (np.abs(array-value)).argmin()
 	return idx 
 
-def generate_spectralsweep(fs,samples,tg_start,tg_end,fstart,fstop,specfact)
+def generate_spectralsweep(fs,samples,tg_start,tg_end,fstart,fstop,specfact):
+	print(fs,samples,tg_start,tg_end,fstart,fstop,specfact)
+	fs=float(fs)
 	#fs=48000
 	#samples=int((nextpow2(fs*3)))#3)/2)+1)
+	samples=float(samples/2)
 	delta_f=fs/samples
 	#tg_start=0.1#05#2400/fs
 	#tg_end=((samples)/fs)/3
@@ -35,7 +38,7 @@ def generate_spectralsweep(fs,samples,tg_start,tg_end,fstart,fstop,specfact)
 	A=tg_start-(B*np.log2(tg_start))
 
 
-	for i in range(1,samples):
+	for i in range(int(samples)):
 	    t_g[i]=t_g[i-1]+(C*(np.abs(H[i]**2)))
 	     
 	phi_start=0
@@ -56,4 +59,5 @@ def generate_spectralsweep(fs,samples,tg_start,tg_end,fstart,fstop,specfact)
 	y=H*(Re+1j*Im)
 
 	signal=np.real((irfft(y)))
+	signal=signal/max(signal)
 	return signal

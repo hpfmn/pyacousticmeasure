@@ -39,12 +39,12 @@ def generate_mls(n,flag):
 
 def generateIR_MLS(signal, mls, N):
 	P=(2**N)-1
-	tagS=generatetagS(mls,P,N)
-	tagL=generatetagL(mls,P,N,tagS)
+	tagS=np.array(generatetagS(mls,P,N),dtype=np.int32)
+	tagL=np.array(generatetagL(mls,P,N,tagS),dtype=np.int32)
 	sigshape=np.shape(signal)
-	resp=np.zeros(sigshape)
+	resp=np.zeros((sigshape[0],sigshape[1]+1))
 	for i in range(0,sigshape[0]):
-		perm=PermuteSignal(signal[i,:],TagS,P)
+		perm=PermuteSignal(signal[i,:],tagS,P)
 		had=FastHadamard(perm,P+1,N)
 		resp[i,:]=PermuteResponse(had,tagL,P)
 	return resp
@@ -56,18 +56,17 @@ def generatetagS(mls,P,N):
 	powerindices=np.arange(N-1,-1,-1)
 	powers=2**powerindices
 
-	S=np.matrix(np.zeros(N,P))
+	S=np.matrix(np.zeros((N,P)))
 	# Make S matrix by right shift mls every subsequent row up to N
 	for i in range(0,N):
 		S[i,0:i]=binmls[P-i:P]
 		S[i,i:P]=binmls[0:P-i]
-	return np.array(powers*S)
+	return np.array(powers*S)[0]
 
 
 def generatetagL(mls,P,N,S):
 	# Convert [-1,1] to binary
 	binmls=(mls-1)/(-2)
-
 	index=np.zeros(N)
 	for i in range(0,P):
 		for j in range(0,N):
@@ -76,24 +75,30 @@ def generatetagL(mls,P,N,S):
 	powerindices=np.arange(0,N)
 	powers=2**powerindices
 	
-	L=np.matix(np.zeros((N,P)))
+	L=np.matrix(np.zeros((N,P)))
 	for i in range(0,N):
 		L[i, 0:(index[i]%P)]=binmls[((index[i]%P)-1)::-1]
 		L[i, (index[i]%P):P]=binmls[(P-1):((index[i]%P)-1):-1]
-	return np.array(powers*L)
+	return np.array(powers*L)[0]
 
 
 def PermuteSignal(signal,tagS,P):
 	perm=np.zeros(P+1)
 	perm[0]=0
-	perm[1:]=signal[tagS]
+	#perm[1:]=signal[tagS-1]
+	perm[tagS]=signal
 	return perm
 
 def PermuteResponse(perm,tagL,P):
-	fact = 1/(P+1)
+	fact = 1.0/(P+1)
+	print(fact)
 	perm=perm[1:]
-	resp=perm[tagL]*fact
-	resp[P+1]=0
+	resp=perm[tagL-1]*fact
+	print(resp)	
+	print(resp.shape)
+	resp=np.concatenate((resp,[0]))
+	#resp[P+1]=0
+	return resp
 
 def FastHadamard(x,P1,N):
 	k1=P1

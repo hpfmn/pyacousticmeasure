@@ -23,7 +23,8 @@ from numpy.fft import fft,ifft,fftshift,ifftshift,fftn,ifftn
 import pysoundfile
 import golay
 import mls
-from gensweeps_arbitrary_spectrum import generate_spectralsweeep
+from gensweeps_arbitrary_spectrum import generate_spectralsweep
+import gensweeps_arbitrary_spectrum
 
 
 jack_running=True
@@ -754,7 +755,7 @@ class MES_GUI:
 		return recb
 
 	def sweepgen(self):
-		if self.sweepkindcb.get()=='Zeitbereich':
+		if self.sweepgenkindcb.get()=='Zeitbereich':
 			step=1.0/self.fs
 			dur = float(float(self.dursp.get())/self.fs)
 			t1=self.sweepend.get()/float(self.fs)
@@ -766,19 +767,19 @@ class MES_GUI:
 
 			if self.sweepmethodcb.get()=='logarithmisch':
 				method='logarithmic'
-			elif slef.sweepmethodcb.get()=='linear':
+			elif self.sweepmethodcb.get()=='linear':
 				method='linear'
 			self.signal=10**(float(self.level.get())/20)*scipy.signal.chirp(t,f0,t1,f1,method=method,phi=-90)
 			self.signal[self.sweepend.get():]=0
-		elif self.sweepkindcb.get()=='Frequenzbereich':
-			tg_start=self.sweepstart/2/float(self.fs)
+		elif self.sweepgenkindcb.get()=='Frequenzbereich':
+			tg_start=self.sweepstart.get()/2/float(self.fs)
 			tg_end=self.sweepend.get()/2/float(self.fs)
-			if self.sweepmethodcb.get=='linear':
+			if self.sweepmethodcb.get()=='linear':
 				specfact=0
-			elif self.sweepmethodcd.get=='logarithmisch':
-				specfact=np.log2(10**(-3.0/20))
-				self.signal=generate_spectralsweep(self.fs,int(self.dursp.get()),tg_start,tg_end,int(self.f0.get()),int(self.f1.get()),specfact)
-				self.signal=10**(float(self.level.get())/20)*self.signal
+			elif self.sweepmethodcb.get()=='logarithmisch':
+				specfact=np.log2(10**(-3.0/40))
+			self.signal=generate_spectralsweep(self.fs,int(self.dursp.get()),tg_start,tg_end,int(self.f0.get()),int(self.f1.get()),specfact)
+			self.signal=10**(float(self.level.get())/20)*self.signal
 
 	def noisegen(self):
 		print('not implemented yet')
@@ -840,8 +841,13 @@ class MES_GUI:
 		N=self.average.shape[0]
 		avgfft=fftn(self.average,s=[NFFT])
 		imp=np.array(np.zeros(avgfft.shape))
+		#maximum=0
 		for i in range(0,N):
 			imp[i,:]=np.real(fftshift(ifft(sigfft/avgfft[i,:])))
+		#	if max(imp[i,:])>maximum:
+		#		maximum=max(imp[i,:])
+		#imp=imp/maximum
+		imp=imp/np.max(imp)
 		toSave=np.array(imp.transpose(), dtype=np.float32)
 		impfile=self.getImpFilename()#self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
 		scipy.io.wavfile.write(impfile,int(self.fs),toSave)
@@ -900,15 +906,19 @@ class MES_GUI:
 			print('respb shape')
 			print(self.respgolayb.shape)
 			delay=int(self.delay.get())
-			if int(delay)>0:
-				self.respgolaya=self.respgolaya[:,delay:len(self.signal)]
+			#if int(delay)>0:
+				#self.respgolaya=self.respgolaya[:,delay:delay+len(self.golaya)]
 				#self.respgolayb=self.respgolayb[:,delay:len(self.signal)]
-			imp=np.zeros((respgolaya.shape))
-			for i in range(respa.shape[0]):
+			print(self.respgolaya.shape)
+			print(self.golaya.shape)
+			print(self.golayb.shape)
+			imp=np.zeros((self.respgolaya.shape))
+			for i in range(self.respgolaya.shape[0]):
 				imp[i,:]=golay.golayIR(self.respgolaya[i,:],self.respgolayb[i,:],self.golaya,self.golayb)
+			imp=imp/np.max(imp)
 			toSave=np.array(imp.transpose(),dtype=np.float32)
 			impfile=self.getImpFilename()
-			scipy.io.wvfile.write(impfile,int(self.fs),toSave)
+			scipy.io.wavfile.write(impfile,int(self.fs),toSave)
 			raw=[]
 			imp=[]
 		else:
@@ -916,9 +926,10 @@ class MES_GUI:
 			print(self.golaycount)
 	def generateMLSIR(self):
 		imp=mls.generateIR_MLS(self.average,self.signal/max(self.signal),int(self.mlsn.get()))
+		imp=imp/np.max(imp)
 		toSave=np.array(imp.transpose(),dtype=np.float32)
 		impfile=self.getImpFilename()
-		scipy.io.wvfile.write(impfile,int(self.fs),toSave)
+		scipy.io.wavfile.write(impfile,int(self.fs),toSave)
 		raw=[]
 		imp=[]
 
