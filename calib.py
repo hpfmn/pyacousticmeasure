@@ -180,6 +180,6 @@ class CALIB_GUI:
 
 
 
-root = tkinter.Tk()
-calib_gui = CALIB_GUI(root)
-root.mainloop()
+#root = tkinter.Tk()
+#calib_gui = CALIB_GUI(root)
+#root.mainloop()

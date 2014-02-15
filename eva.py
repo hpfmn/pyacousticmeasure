@@ -236,11 +236,11 @@ class EVA_GUI:
 		self.specplotvalues=cfgdlg(cfgvalues)
 		self.specplot()
 	
-root = tkinter.Tk()
+#root = tkinter.Tk()
 #root.columnconfigure(0, weight=1)
 #root.rowconfigure(0, weight=1)
 #root.columnconfigure(1, weight=10)
 #root.rowconfigure(1, weight=6)
-eva_gui = EVA_GUI(root)
-root.mainloop()
+#eva_gui = EVA_GUI(root)
+#root.mainloop()
 

@@ -27,41 +27,29 @@ from gensweeps_arbitrary_spectrum import generate_spectralsweep
 import gensweeps_arbitrary_spectrum
 
 
-jack_running=True
-try:
-	jack.attach('measure')
-except Exception as e:
-	print(e)
-	jack_running=False
-
-p = pyaudio.PyAudio()
-
-FORMAT=pyaudio.paFloat32
-
-hostapis=dict()
-for i in range(0,p.get_host_api_count()):
-	hostapis[p.get_host_api_info_by_index(i)['name']] = i
-
 def nextpow2(m):
 	return 2**np.ceil(np.log2(m))
-
-def listadev(hostapi, iotype):
-	"""Returns a dictionary containing name and index of all devices of a specific hostapi"""
-	adevs=dict()
-	for i in range(0,p.get_host_api_info_by_index(hostapi)['deviceCount']):
-		if iotype=='i':
-			if p.get_device_info_by_host_api_device_index(hostapi,i)['maxInputChannels'] > 0:
-				adevs[p.get_device_info_by_host_api_device_index(hostapi,i)['name']] = p.get_device_info_by_host_api_device_index(hostapi,i)['index']
-		else:
-			if p.get_device_info_by_host_api_device_index(hostapi,i)['maxOutputChannels'] > 0:
-				adevs[p.get_device_info_by_host_api_device_index(hostapi,i)['name']] = p.get_device_info_by_host_api_device_index(hostapi,i)['index']
-	return adevs
 
 
 
 class MES_GUI:
 	"""Class for measurement GUI """
 	def __init__(self, parent):
+		self.jack_running=True
+		try:
+			jack.attach('measure')
+		except Exception as e:
+			print(e)
+			self.jack_running=False
+
+		self.p = pyaudio.PyAudio()
+
+		self.FORMAT=pyaudio.paFloat32
+
+		self.hostapis=dict()
+		for i in range(0,self.p.get_host_api_count()):
+			self.hostapis[self.p.get_host_api_info_by_index(i)['name']] = i
+
 		self.myParent = parent
 		self.myParent.columnconfigure(0, weight=1)
 		self.myParent.columnconfigure(1, weight=1)
@@ -75,26 +63,26 @@ class MES_GUI:
 		# Items in Audio Setup Frame
 		self.adriverlabel = ttk.Label(self.pyauseframe, text='Treibertyp')
 		self.adriverlabel.grid(row=1, column=0)
-		self.adrvcb = ttk.Combobox(self.pyauseframe, values=(list(hostapis.keys())), state='readonly')
-		self.adrvcb.set(p.get_default_host_api_info()['name'])
+		self.adrvcb = ttk.Combobox(self.pyauseframe, values=(list(self.hostapis.keys())), state='readonly')
+		self.adrvcb.set(self.p.get_default_host_api_info()['name'])
 		self.adrvcb.bind('<<ComboboxSelected>>', self.hostapichange)
 		self.adrvcb.grid(row=1, column=1)
 		self.aodevlabel= ttk.Label(self.pyauseframe, text='Wiedergabegerät')
 		self.aodevlabel.grid(row=2, column=0)
-		self.aodevlist = listadev(p.get_default_host_api_info()['index'],'o')
+		self.aodevlist = self.listadev(self.p.get_default_host_api_info()['index'],'o')
 		self.aodevcb = ttk.Combobox(self.pyauseframe, values=(list(self.aodevlist.keys())), state='readonly')
-		self.aodevcb.set(p.get_default_output_device_info()['name'])
+		self.aodevcb.set(self.p.get_default_output_device_info()['name'])
 		self.aodevcb.grid(row=2, column=1)
 		self.aidevlabel= ttk.Label(self.pyauseframe, text='Aufnahmegerät')
 		self.aidevlabel.grid(row=3, column=0)
-		self.aidevlist = listadev(p.get_default_host_api_info()['index'],'i')
+		self.aidevlist = self.listadev(self.p.get_default_host_api_info()['index'],'i')
 		self.aidevcb = ttk.Combobox(self.pyauseframe, values=(list(self.aidevlist.keys())), state='readonly')
-		self.aidevcb.set(p.get_default_input_device_info()['name'])
+		self.aidevcb.set(self.p.get_default_input_device_info()['name'])
 		self.aidevcb.grid(row=3, column=1)
 
 		self.nooclabel = ttk.Label(self.pyauseframe, text='Ausgangskanalanzahl')
 		self.nooclabel.grid(row=4,column=0)
-		self.ochannels = p.get_device_info_by_index(self.aodevlist[self.aodevcb.get()])['maxOutputChannels']
+		self.ochannels = self.p.get_device_info_by_index(self.aodevlist[self.aodevcb.get()])['maxOutputChannels']
 		self.nooccb = ttk.Combobox(self.pyauseframe, values=list(range(1,self.ochannels+1)), state='readonly')
 		self.nooccb.current(0)
 		self.nooccb.bind('<<ComboboxSelected>>', self.occhange)
@@ -102,7 +90,7 @@ class MES_GUI:
 
 		self.noiclabel = ttk.Label(self.pyauseframe, text='Eingangskanalanzahl')
 		self.noiclabel.grid(row=5,column=0)
-		self.ichannels = p.get_device_info_by_index(self.aidevlist[self.aidevcb.get()])['maxInputChannels']
+		self.ichannels = self.p.get_device_info_by_index(self.aidevlist[self.aidevcb.get()])['maxInputChannels']
 		self.noiccb = ttk.Combobox(self.pyauseframe, values=list(range(1,self.ichannels+1)), state='readonly')
 		self.noiccb.bind('<<ComboboxSelected>>', self.icchange)
 		self.noiccb.current(0)
@@ -120,7 +108,7 @@ class MES_GUI:
 		self.ausenb.grid(row=0, column=0, sticky=tkinter.W+tkinter.E+tkinter.S+tkinter.N)
 
 		# LabelFrame for PyJack Setup 
-		if jack_running:
+		if self.jack_running:
 			self.pyjaseframe = ttk.LabelFrame(self.myParent, text='PyJack Setup') 
 			self.pyjaseframe.grid(row=0,column=0) 
 			self.jainplabel = ttk.Label(self.pyjaseframe, text='Jack Inputs auswählen:') 
@@ -364,7 +352,7 @@ class MES_GUI:
 		self.sweepend.set(int(int(self.dursp.get())-np.ceil(((1.0/int(self.f1.get()))*self.fs)/2)))
 
 	def hostapichange(self, event):
-		host_api_index=hostapis[self.adrvcb.get()]
+		host_api_index=self.hostapis[self.adrvcb.get()]
 		self.aidevlist = listadev(host_api_index,'i')
 		self.aidevcb.configure(values=list(self.aidevlist.keys()))
 		self.aidevcb.current(newindex=0)
@@ -427,12 +415,12 @@ class MES_GUI:
 		self.durcb.grid(row=4, column=1)
 
 	def occhange(self, event):
-		self.ochannels = p.get_device_info_by_index(self.aodevlist[self.aodevcb.get()])['maxOutputChannels']
+		self.ochannels = self.p.get_device_info_by_index(self.aodevlist[self.aodevcb.get()])['maxOutputChannels']
 		self.nooccb.configure(values=list(range(1,self.ochannels+1)))
 		
 
 	def icchange(self, event):
-		self.ichannels = p.get_device_info_by_index(self.aidevlist[self.aidevcb.get()])['maxInputChannels']
+		self.ichannels = self.p.get_device_info_by_index(self.aidevlist[self.aidevcb.get()])['maxInputChannels']
 		self.noiccb.configure(values=list(range(1,self.ochannels+1)))
 
 	def IsPyAudio(self):
@@ -453,7 +441,7 @@ class MES_GUI:
 	def TestPyAudio(self):
 		outputdev = self.aodevlist[self.aodevcb.get()]
 		CHANNELS=int(self.nooccb.get())
-		stream = p.open(format=FORMAT,
+		stream = self.p.open(format=self.FORMAT,
 				channels=CHANNELS,
 				rate=self.fs,
 				output=True,
@@ -674,13 +662,13 @@ class MES_GUI:
 		#self.outputsignal=self.signal*(2**15-1)
 		self.plpos = 0
 		
-		ostream = p.open(format=FORMAT,
+		ostream = self.p.open(format=self.FORMAT,
 				channels=OCHANNELS,
 				rate=self.fs,
 				output=True,
 				output_device_index=outputdev,
 				stream_callback=self.get_plcb())
-		istream = p.open(format=FORMAT,
+		istream = self.p.open(format=self.FORMAT,
 				channels=ICHANNELS,
 				rate=self.fs,
 				input=True,
@@ -721,7 +709,7 @@ class MES_GUI:
 			rawfile=self.getRawFilename(int(int(self.siavg.get())-self.cursiavg))#self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(int(self.siavg)-self.cursiavg)+'.wav'
 			#wf = wave.open(rawfile, 'wb')
 			#wf.setnchannels(ICHANNELS)
-			#wf.setsampwidth(p.get_sample_size(FORMAT))
+			#wf.setsampwidth(p.get_sample_size(self.FORMAT))
 			#wf.setframerate(self.fs)
 			#wf.writeframes(b''.join(self.record))
 			#wf.close()
@@ -731,7 +719,7 @@ class MES_GUI:
 
 		# Convert to Numpy array and add to temp raw list
 		#if self.impcheck.get():
-			#MAX_y = 2.0**(p.get_sample_size(FORMAT) * 8 - 1)
+			#MAX_y = 2.0**(p.get_sample_size(self.FORMAT) * 8 - 1)
 			#y = np.array(struct.unpack("%dh" % (BUFFER * ICHANNELS), self.record)) / MAX_y
 			#x = np.array
 			#for i in range(0,ICHANNELS):
@@ -897,7 +885,6 @@ class MES_GUI:
 		self.sigcheck.set(sigstat)
 		self.delay.set(str(pos))
 
-
 	def generateGolayIR(self):
 		if self.golaycount=='b':
 			self.respgolayb=self.average
@@ -924,6 +911,18 @@ class MES_GUI:
 		else:
 			print('golaycount')
 			print(self.golaycount)
+	def listadev(self, hostapi, iotype):
+		"""Returns a dictionary containing name and index of all devices of a specific hostapi"""
+		adevs=dict()
+		for i in range(0,self.p.get_host_api_info_by_index(hostapi)['deviceCount']):
+			if iotype=='i':
+				if self.p.get_device_info_by_host_api_device_index(hostapi,i)['maxInputChannels'] > 0:
+					adevs[self.p.get_device_info_by_host_api_device_index(hostapi,i)['name']] = self.p.get_device_info_by_host_api_device_index(hostapi,i)['index']
+			else:
+				if self.p.get_device_info_by_host_api_device_index(hostapi,i)['maxOutputChannels'] > 0:
+					adevs[self.p.get_device_info_by_host_api_device_index(hostapi,i)['name']] = self.p.get_device_info_by_host_api_device_index(hostapi,i)['index']
+
+		return adevs
 	def generateMLSIR(self):
 		imp=mls.generateIR_MLS(self.average,self.signal/max(self.signal),int(self.mlsn.get()))
 		imp=imp/np.max(imp)
@@ -932,11 +931,13 @@ class MES_GUI:
 		scipy.io.wavfile.write(impfile,int(self.fs),toSave)
 		raw=[]
 		imp=[]
+	def __del__(self):
+		self.p.terminate()
+		if self.jack_running:
+			jack.detach()
 
 
-root = tkinter.Tk()
-mes_gui = MES_GUI(root)
-root.mainloop()
-p.terminate()
-if jack_running:
-	jack.detach()
+
+#root = tkinter.Tk()
+#mes_gui = MES_GUI(root)
+#root.mainloop()
