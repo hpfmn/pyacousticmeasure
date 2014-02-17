@@ -831,7 +831,7 @@ class MES_GUI:
 		imp=np.array(np.zeros(avgfft.shape))
 		#maximum=0
 		for i in range(0,N):
-			imp[i,:]=np.real(fftshift(ifft(sigfft/avgfft[i,:])))
+			imp[i,:]=np.real(fftshift(ifft(avgfft[i,:]/sigfft)))
 		#	if max(imp[i,:])>maximum:
 		#		maximum=max(imp[i,:])
 		#imp=imp/maximum
