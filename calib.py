@@ -1,8 +1,15 @@
+# coding=utf8
 import numpy as np
-import tkinter
-import tkinter.ttk as ttk
+import sys
+if sys.version_info<(3,0,0):
+	import Tkinter as tkinter
+	import ttk as ttk
+	import tkFileDialog as filedialog
+else:
+	import tkinter
+	import tkinter.ttk as ttk
+	import tkinter.filedialog as filedialog
 import pysoundfile
-import tkinter.filedialog as filedialog
 import os
 import os.path
 from numpy.fft import fft, ifft, fftshift, ifftshift

@@ -1,12 +1,19 @@
+# coding=utf8
 import numpy as np
 import os
 import scipy
 import scipy.io.wavfile
 import pysoundfile
 import scipy.signal
-import tkinter
-import tkinter.filedialog as filedialog
-import tkinter.ttk as ttk
+import sys
+if sys.version_info<(3,0,0):
+	import Tkinter as tkinter
+	import tkFileDialog as filedialog
+	import ttk as ttk
+else:
+	import tkinter
+	import tkinter.filedialog as filedialog
+	import tkinter.ttk as ttk
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt

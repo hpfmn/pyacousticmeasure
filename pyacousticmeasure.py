@@ -1,5 +1,11 @@
-import tkinter
-import tkinter.ttk as ttk
+# coding=utf8
+import sys
+if sys.version_info<(3,0,0):
+	import Tkinter as tkinter
+	import ttk as ttk
+else:
+	import tkinter
+	import tkinter.ttk as ttk
 import mes
 import eva
 import calib

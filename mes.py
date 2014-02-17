@@ -226,7 +226,7 @@ class MES_GUI:
 		self.level.set('-12')
 		self.levele.grid(row=3, column=1, sticky=tkinter.E+tkinter.W)
 
-		self.dur=tkinter.StringVar()
+		self.dur=tkinter.DoubleVar()
 		self.dur.trace('w',self.durchange)
 		self.durlabel = ttk.Label(self.siseframe, text='Dauer in Sekunden')
 		self.durcb = ttk.Combobox(self.siseframe, values=(),textvariable=self.dur)
@@ -849,13 +849,12 @@ class MES_GUI:
 		toSave=np.array(self.average,dtype=np.float32)
 		scipy.io.wavfile.write(self.getImpFilename(),int(self.fs),toSave.transpose())
 	def durspchange(self,name,index,mode):
-		sec=int(self.dursp.get())/self.fs
-		self.dur.set(str(sec))
+		sec=int(self.dursp.get())/float(self.fs)
+		self.dur.set(sec)
 		self.actsweepend()
 	def durchange(self,name,index,mode):
-		pass
-		#samp=float(self.dur.get())*self.fs
-		#self.dursp.set(str(int(samp)))
+		samp=self.dur.get()*self.fs
+		self.dursp.set(str(int(samp)))
 	def f1change(self,name,index,mode):
 		self.actsweepend()
 	def delayButtonClick(self):
