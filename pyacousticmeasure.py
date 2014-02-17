@@ -13,7 +13,7 @@ import calib
 root = tkinter.Tk()
 
 master = ttk.Notebook(root)
-master.pack(fill=tkinter.BOTH)
+master.pack(fill=tkinter.BOTH,expand=1)
 
 mesframe=ttk.Frame(master)
 evaframe=ttk.Frame(master)
