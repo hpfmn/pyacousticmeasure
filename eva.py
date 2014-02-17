@@ -29,23 +29,30 @@ def find_nearest(array,value):
 
 cc = matplotlib.colors.ColorConverter()
 
+def butter_bandpass(lowcut, highcut, fs, order=5):
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = highcut / nyq
+    b, a = scipy.signal.butter(order, [low, high], btype='band')
+    return b, a
+
+def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
+    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
+    y = scipy.signal.lfilter(b, a, data)
+    return y
+
 def nextpow2(i):
 	return 2**np.ceil(np.log2(i))
 
-def phaseunwrap(phase):
-	for i in range(1,len(phase)):
-			if((phase[i]-phase[i-1]) < -np.pi):
-				phase[i]+=2*np.pi
-			if((phase[i]-phase[i-1]) > np.pi):
-				phase[i]-=2*np.pi
-	return phase
-
 class EVA_GUI:
 	def __init__(self, parent):
-		self.plotdata_dict={'wvplot': self.wvplot, 'psd': self.psdplot, 'spec': self.specplot, 'angle': self.angleplot, 'groupdelay': self.gd_plot, 'polar': self.polarplot}
-		self.plotcfg_dict={'spec': self.specplotcfg}
+		self.plotdata_dict={'wvplot': self.wvplot, 'psd': self.psdplot, 'spec': self.specplot, 'angle': self.angleplot, 'groupdelay': self.gd_plot, 'polar': self.polarplot,'welchpsd':self.welchplot}
+		self.plotcfg_dict={'spec': self.specplotcfg, 'polar': self.polarplotcfg,'wvplot':self.wvplotcfg,'welchpsd':self.welchplotcfg}
 
 		self.specplotvalues={'NFFT': 256,'window':'hann','noverlap':128}
+		self.welchplotvalues={'NFFT': 256,'window':'boxcar','noverlap':128,'padto':256}
+		self.polarplotvalues={'Radius in Grad': 360,'Frequenz': 1000}
+		self.wvplotvalues={'Linienart': '-','Zeichenmodus': 'default','Filter':0,'Startfrequenz':50,'Endfrequenz':20000,'Filterordnung':5}
 
 		self.myParent = parent
 		self.pany=ttk.PanedWindow(parent,orient=tkinter.VERTICAL)
@@ -59,7 +66,7 @@ class EVA_GUI:
 		#self.filesframe.grid(row=0, column=0, columnspan=2, sticky=(tkinter.N, tkinter.S, tkinter.E, tkinter.W))
 		self.filesframe.columnconfigure(0, weight=1)
 		self.filesframe.columnconfigure(1, weight=0)
-		self.filesframe.columnconfigure(2, weight=0)
+		self.filesframe.columnconfigure(2, weight=0) 
 		self.filesframe.rowconfigure(0, weight=1)
 		self.filesframe.rowconfigure(1, weight=1)
 		self.treeframe = ttk.Frame(self.panx)
@@ -92,7 +99,9 @@ class EVA_GUI:
 		self.evatree = ttk.Treeview(self.treeframe)
 		self.evatree.grid(row=0,column=0, sticky=(tkinter.N, tkinter.W, tkinter.S, tkinter.E))
 		self.evatree.insert('','end','wvplot', text='Plot Wellenform')
-		self.evatree.insert('','end','psd', text='Plot Periodogram')
+		self.evatree.insert('','end','Amplitudengang',text='Amplitudengang',open=True)
+		self.evatree.insert('Amplitudengang','end','psd', text='Plot Periodogram')
+		self.evatree.insert('Amplitudengang','end','welchpsd', text='Plot Welch Periodogram')
 		self.evatree.insert('','end','angle', text='Plot Angle')
 		self.evatree.insert('','end','groupdelay', text='Plot Group Delay')
 		self.evatree.insert('','end','spec', text='Plot Spektogram')
@@ -137,13 +146,24 @@ class EVA_GUI:
 			del self.datas[self.fileslist.get(element)]
 			self.fileslist.delete(element)
 	def plotdata(self, event):
+		self.fig.clear()
 		self.plotdata_dict[self.evatree.selection()[0]]()
 	def wvplot(self):
 		subpl = self.fig.add_subplot(111)
 		subpl.hold(False)
+		linestyle=self.wvplotvalues['Linienart']
+		drawmode=self.wvplotvalues['Zeichenmodus']
+		print(drawmode+linestyle)
+		filteract=int(self.wvplotvalues['Filter'])
+		bandstart=int(self.wvplotvalues['Startfrequenz'])
+		bandstop=int(self.wvplotvalues['Endfrequenz'])
+		filterorder=int(self.wvplotvalues['Filterordnung'])
 		for i in self.fileslist.curselection():
 			data=self.datas[self.fileslist.get(i)][1]
-			p = subpl.plot(data,'.')
+			fs=self.datas[self.fileslist.get(i)][0]
+			if filteract:
+				data=butter_bandpass_filter(data,bandstart,bandstop,fs,filterorder)
+			p = subpl.plot(data,ls=drawmode+linestyle)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 			subpl.hold(True)
 		self.plotcanvas.show()
@@ -154,14 +174,14 @@ class EVA_GUI:
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
 			f,psd = scipy.signal.periodogram(data,fs,nfft=nextpow2(len(data)))
-			psd = 20*np.log10(psd)
+			psd = 20*np.log10(psd/max(psd))
 			p = subpl.semilogx(f, psd)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 			subpl.hold(True)
 		self.plotcanvas.show()
 	def angleplot(self):
 		subpl = self.fig.add_subplot(111)
-		subpl.hold(False)
+		subpl.hold(True)
 		for i in self.fileslist.curselection():
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
@@ -174,11 +194,10 @@ class EVA_GUI:
 			f=np.linspace(0,fs/2,nfft/2)
 			p = subpl.plot(f, angle_fft)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
-			subpl.hold(True)
 		self.plotcanvas.show()
 	def gd_plot(self):
 		subpl = self.fig.add_subplot(111)
-		subpl.hold(False)
+		subpl.hold(True)
 		for i in self.fileslist.curselection():
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
@@ -194,11 +213,10 @@ class EVA_GUI:
 				gd[n]=-1*((phase[n-1]-phase[n+1])/(f[n-1]-f[n+1]))
 			p = subpl.plot(f, gd)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
-			subpl.hold(True)
 		self.plotcanvas.show()
 	def specplot(self):
 		elements=len(self.fileslist.curselection())
-		self.fig.clear()
+		#self.fig.clear()
 		#subpl = self.fig.add_subplot(elements,1,1)
 		#subpl.hold(False)
 		print(self.specplotvalues)
@@ -213,25 +231,50 @@ class EVA_GUI:
 			subpl.specgram(data,Fs=fs,NFFT=nfft,window=window,noverlap=noverlap)
 			e+=1
 		self.plotcanvas.show()
+	def welchplot(self):
+		subpl = self.fig.add_subplot(111)
+		subpl.hold(True)
+		elements=len(self.fileslist.curselection())
+		#subpl = self.fig.add_subplot(elements,1,1)
+		#subpl.hold(False)
+		print(self.welchplotvalues)
+		nfft=int(self.welchplotvalues['NFFT'])
+		padto=int(self.welchplotvalues['padto'])
+		window=scipy.signal.get_window(window=self.welchplotvalues['window'],Nx=nfft)
+		noverlap=int(self.welchplotvalues['noverlap'])
+		for i in self.fileslist.curselection():
+			fs=self.datas[self.fileslist.get(i)][0]
+			data=self.datas[self.fileslist.get(i)][1]
+			subpl.psd(data,Fs=fs,NFFT=nfft,window=window,noverlap=noverlap,pad_to=padto)
+			p=subpl.get_lines()
+			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[-1].get_c())))
+		self.plotcanvas.show()
 	def polarplot(self):
-		self.fig.clear()
+		degree=int(self.polarplotvalues['Radius in Grad'])
+		freq=int(self.polarplotvalues['Frequenz'])
+		#self.fig.clear()
 		subpl = self.fig.add_subplot(111, polar=True)
 		subpl.hold(False)
 		elements=len(self.fileslist.curselection())
 		print(elements)
-		plot_degree=2*np.pi
+		plot_degree=np.radians(degree)
 		r = np.linspace(0,plot_degree,elements)
 		theta = np.zeros(elements)
 		x = 0
+		maximum=0
 		for i in self.fileslist.curselection():
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
-			nfft=int(nextpow2(len(data)))
-			data_fft=fft(data,n=nfft)
-			f=np.linspace(0,fs/2,nfft/2)
-			theta[x]=np.abs(data_fft[find_nearest(f,1000)+(nfft/2)])
+			f,psd = scipy.signal.periodogram(data,fs,nfft=nextpow2(len(data)))
+			theta[x]=np.abs(psd[find_nearest(f,freq)])
 			x+=1
+		print(theta)
+		#theta=-10*np.log10(theta/np.max(theta))
+		#theta=theta+np.abs(np.min(theta))
+		#theta=theta+np.abs(np.min(theta))+1
+		print(theta)
 		p = subpl.plot(r,theta)
+	#	subpl.set_rscale('log')
 		self.plotcanvas.show()
 	def plotcfg(self):
 		self.plotcfg_dict[self.evatree.selection()[0]]()
@@ -239,15 +282,36 @@ class EVA_GUI:
 		nfft=self.specplotvalues['NFFT']
 		window=self.specplotvalues['window']
 		noverlap=self.specplotvalues['noverlap']
-		cfgvalues=['Spektogramm Konfiguration',['NFFT','e',str(nfft)],['window','cbro',window,'boxcar', 'triang', 'blackman', 'hamming', 'hann', 'bartlett', 'flattop', 'parzen', 'bohman', 'blackmanharris', 'nuttall', 'barthann'],['noverlap','e',str(noverlap)]]
+		cfgvalues=['Spektrogramm Konfiguration',['NFFT','e',str(nfft)],['window','cbro',window,'boxcar', 'triang', 'blackman', 'hamming', 'hann', 'bartlett', 'flattop', 'parzen', 'bohman', 'blackmanharris', 'nuttall', 'barthann'],['noverlap','e',str(noverlap)]]
 		self.specplotvalues=cfgdlg(cfgvalues)
+		self.fig.clear()
 		self.specplot()
-	
-#root = tkinter.Tk()
-#root.columnconfigure(0, weight=1)
-#root.rowconfigure(0, weight=1)
-#root.columnconfigure(1, weight=10)
-#root.rowconfigure(1, weight=6)
-#eva_gui = EVA_GUI(root)
-#root.mainloop()
+	def polarplotcfg(self):
+		degree=int(self.polarplotvalues['Radius in Grad'])
+		freq=int(self.polarplotvalues['Frequenz'])
+		cfgvalues=['Polardiagramm Konfiguration',['Radius in Grad','e',str(degree)],['Frequenz','e',str(freq)]]
+		self.polarplotvalues=cfgdlg(cfgvalues)
+		self.fig.clear()
+		self.polarplot()
+	def wvplotcfg(self):
+		linestyle=self.wvplotvalues['Linienart']
+		drawmode=self.wvplotvalues['Zeichenmodus']
+		filteract=self.wvplotvalues['Filter']
+		bandstart=self.wvplotvalues['Startfrequenz']
+		bandstop=self.wvplotvalues['Endfrequenz']
+		filterorder=self.wvplotvalues['Filterordnung']
+		cfgvalues=['Wellenform Konfiguration',['Linienart','cbro',linestyle,'-','--','-.',':','None'],['Zeichenmodus','cbro',drawmode,'default' ,'steps' ,'steps-mid','steps-post'],['Filter','c',filteract],['Startfrequenz','e',bandstart],['Endfrequenz','e',bandstop],['Filterordnung','e',filterorder]]
+		self.wvplotvalues=cfgdlg(cfgvalues)
+		self.fig.clear()
+		self.wvplot()
+	def welchplotcfg(self):
+		nfft=self.welchplotvalues['NFFT']
+		window=self.welchplotvalues['window']
+		noverlap=self.welchplotvalues['noverlap']
+		padto=self.welchplotvalues['padto']
+		cfgvalues=['Welch-Periodogramm Konfiguration',['NFFT','e',str(nfft)],['window','cbro',window,'boxcar', 'triang', 'blackman', 'hamming', 'hann', 'bartlett', 'flattop', 'parzen', 'bohman', 'blackmanharris', 'nuttall', 'barthann'],['noverlap','e',str(noverlap)],['padto','e',padto]]
+		self.welchplotvalues=cfgdlg(cfgvalues)
+		self.fig.clear()
+		self.welchplot()
+
 
