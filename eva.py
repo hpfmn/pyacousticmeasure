@@ -123,22 +123,23 @@ class EVA_GUI:
 		self.plottoolb.update()
 		self.plotcanvas._tkcanvas.pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)#grid(row=1,column=0)
 	def add_measure(self):
-		filename = filedialog.askopenfilename(filetypes=[('Wav-Files','*.wav')])
+		filenames = filedialog.askopenfilenames(filetypes=[('Wav-Files','*.wav')])
 		#fs,data_read = scipy.io.wavfile.read(filename)
-		wav = pysoundfile.SoundFile(filename)
-		fs = wav.sample_rate
-		data = wav.read(wav.frames)
-		print(data.shape)
-		fname = filename[filename.rfind(os.sep)+1:]
-		for i in range(0,data.shape[1]):
-			if data.shape[1] > 1:
-				name = fname+'CH'+str(i+1)
-			else:
-				name = fname
-			while name in list(self.datas.keys()):
-				name='_'+name
-			self.fileslist.insert(tkinter.END, name)
-			self.datas[name] = (fs, data[:,i])
+		for filename in filenames:
+			wav = pysoundfile.SoundFile(filename)
+			fs = wav.sample_rate
+			data = wav.read(wav.frames)
+			print(data.shape)
+			fname = filename[filename.rfind(os.sep)+1:]
+			for i in range(0,data.shape[1]):
+				if data.shape[1] > 1:
+					name = fname+'CH'+str(i+1)
+				else:
+					name = fname
+				while name in list(self.datas.keys()):
+					name='_'+name
+				self.fileslist.insert(tkinter.END, name)
+				self.datas[name] = (fs, data[:,i])
 
 	def rem_selected(self):
 		while () != self.fileslist.curselection():
