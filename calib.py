@@ -21,71 +21,96 @@ def nextpow2(n):
 class CALIB_GUI:
 	def __init__(self, parent):
 		self.myparent = parent
+		self.myparent.rowconfigure(0,weight=1)
+		self.myparent.rowconfigure(1,weight=1)
+		self.myparent.columnconfigure(0,weight=1)
 		self.calibframe = ttk.LabelFrame(self.myparent, text='Impulsantwort erstellen')
-		self.calibframe.grid(row=0,column=0)
+		self.calibframe.grid(row=0,column=0, sticky=tkinter.W+tkinter.E+tkinter.S+tkinter.N)
+		self.calibframe.rowconfigure(0,weight=0)
+		self.calibframe.rowconfigure(1,weight=1)
+		self.calibframe.rowconfigure(2,weight=1)
+		self.calibframe.columnconfigure(0,weight=1)
+		self.calibframe.columnconfigure(1,weight=0)
+		self.calibframe.columnconfigure(2,weight=0)
 		self.datas = dict()
 
 		self.loadbtn = ttk.Button(self.calibframe, text='Laden', command=self.add_files)
-		self.loadbtn.grid(row=0, column=0, columnspan=2)
+		self.loadbtn.grid(row=0, column=0, columnspan=3,sticky=tkinter.W+tkinter.E+tkinter.N)
 
 		self.fileslist = tkinter.Listbox(self.calibframe,exportselection=0)
-		self.fileslist.grid(row=1, column=0,rowspan=2, sticky=(tkinter.W))
+		self.fileslist.grid(row=1, column=0,rowspan=2, sticky=tkinter.W+tkinter.E+tkinter.S+tkinter.N)
 		self.filescroll = ttk.Scrollbar(self.calibframe,orient=tkinter.VERTICAL, command=self.fileslist.yview)
 		self.filescroll.grid(row=1,column=1,rowspan=2, sticky=(tkinter.N,tkinter.S,tkinter.E))
 		self.fileslist['yscrollcommand'] = self.filescroll.set
 
 
 		self.upbtn = ttk.Button(self.calibframe, text='↑', command=self.moveup)
-		self.upbtn.grid(row=1,column=2)
+		self.upbtn.grid(row=1,column=2,sticky=tkinter.N+tkinter.W+tkinter.E)
 		self.downbtn = ttk.Button(self.calibframe, text='↓', command=self.movedown)
-		self.downbtn.grid(row=2,column=2)
+		self.downbtn.grid(row=2,column=2, sticky=tkinter.S+tkinter.W+tkinter.E)
 
 
 		self.refbtn = ttk.Button(self.calibframe, text='Referenz wählen', command=self.gen_imp)
-		self.refbtn.grid(row=3,column=0)
+		self.refbtn.grid(row=3,column=0,sticky=tkinter.W+tkinter.E+tkinter.S)
 		self.delbtn = ttk.Button(self.calibframe, text='Auswahl entfernen', command=self.rem_files)
-		self.delbtn.grid(row=3,column=2)
+		self.delbtn.grid(row=3,column=2,sticky=tkinter.E+tkinter.S)
 
 
 		# Convolution Frame
 
 		self.convframe = ttk.LabelFrame(self.myparent, text='Dateien mit Impulsantwort falten')
-		self.convframe.grid(row=1,column=0)
+		self.convframe.grid(row=1,column=0,sticky=tkinter.W+tkinter.E+tkinter.S+tkinter.N)
+		self.convframe.rowconfigure(0,weight=1)
+		self.convframe.rowconfigure(1,weight=1)
+		self.convframe.rowconfigure(2,weight=1)
+		self.convframe.rowconfigure(3,weight=1)
+		self.convframe.rowconfigure(4,weight=1)
+		self.convframe.rowconfigure(5,weight=1)
+		self.convframe.columnconfigure(0,weight=0)
+		self.convframe.columnconfigure(1,weight=1)
+		self.convframe.columnconfigure(2,weight=0)
 
 		self.multichannellabel= ttk.Label(self.convframe, text='Multichannel Datei')
-		self.multichannellabel.grid(row=0,column=0)
+		self.multichannellabel.grid(row=0,column=0,sticky=tkinter.E+tkinter.W)
 		self.multichannel=tkinter.IntVar()
 		self.multichannel.set(1)
 		self.multichannelcheck=ttk.Checkbutton(self.convframe, variable=self.multichannel, command=self.multichtoggle)
 		self.multichannelcheck.grid(row=0,column=1)
-		
+
+		self.fftconvlabel= ttk.Label(self.convframe, text='FFT Faltung')
+		self.fftconvlabel.grid(row=1,column=0,sticky=tkinter.E+tkinter.W)
+		self.fftconv=tkinter.IntVar()
+		self.fftconv.set(1)
+		self.fftconvcheck=ttk.Checkbutton(self.convframe, variable=self.multichannel, command=self.multichtoggle)
+		self.fftconvcheck.grid(row=1,column=1)
+
 		self.impfile=tkinter.StringVar()
 		self.impfilelabel=ttk.Label(self.convframe, text='Impulsantwort:')
 		self.impfilee=ttk.Entry(self.convframe, textvariable=self.impfile)
-		self.impfilelabel.grid(row=1,column=0)
-		self.impfilee.grid(row=1,column=1)
+		self.impfilelabel.grid(row=2,column=0,sticky=tkinter.E+tkinter.W)
+		self.impfilee.grid(row=2,column=1,sticky=tkinter.E+tkinter.W)
 		self.openimpfilebtn=ttk.Button(self.convframe, text='Impulsantwort wählen', command=self.chooseimp)
-		self.openimpfilebtn.grid(row=1,column=2)
+		self.openimpfilebtn.grid(row=2,column=2,sticky=tkinter.E+tkinter.W)
 
 
 		self.filespath=tkinter.StringVar()
 		self.pathlabel=ttk.Label(self.convframe, text='Pfad:')
 		self.pathe=ttk.Entry(self.convframe, textvariable=self.filespath)
 		self.openfilespath=ttk.Button(self.convframe, text='Bearbeitungs-Pfad wählen', command=self.choosepath)
-		self.pathlabel.grid(row=2, column=0)
-		self.pathe.grid(row=2,column=1)
-		self.openfilespath.grid(row=2,column=2)
+		self.pathlabel.grid(row=3, column=0,sticky=tkinter.E+tkinter.W)
+		self.pathe.grid(row=3,column=1,sticky=tkinter.E+tkinter.W)
+		self.openfilespath.grid(row=3,column=2,sticky=tkinter.E+tkinter.W)
 
 		self.prefixlabel=ttk.Label(self.convframe, text='Dateianfang:')
 		self.prefix=tkinter.StringVar()
 		self.prefixe=ttk.Entry(self.convframe, textvariable=self.prefix)
-		self.prefixlabel.grid(row=3,column=0)
-		self.prefixe.grid(row=3,column=1)
+		self.prefixlabel.grid(row=4,column=0,sticky=tkinter.E+tkinter.W)
+		self.prefixe.grid(row=4,column=1,sticky=tkinter.E+tkinter.W)
 
 		self.channelframe=ttk.Frame(self.convframe)
 
 		self.convbutton=ttk.Button(self.convframe, text='Falten',command=self.convfiles)
-		self.convbutton.grid(row=4,column=0,columnspan=3)
+		self.convbutton.grid(row=5,column=0,columnspan=3,sticky=tkinter.E+tkinter.W+tkinter.S)
 		
 		
 
