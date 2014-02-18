@@ -112,14 +112,14 @@ class CALIB_GUI:
 		self.channeldigits.set(2)
 		self.channeldigitslabel=ttk.Label(self.channelframe,text='Anzahl Kanalnummernstellen')
 		self.channeldigitse=ttk.Entry(self.channelframe,textvariable=self.channeldigits)
-		self.channeldigitslabel.grid(row=0,column=0,sticky=tkinter.E+tkinter+W)
-		self.channeldigitse.grid(row=0,column=1, columnspan=2,sticky=tkinter.E+tkinter+W)
-		self.channelstartlabel.ttk.Label(self.channelframe,text='Erste Kanalnummer')
+		self.channeldigitslabel.grid(row=0,column=0,sticky=tkinter.E+tkinter.W)
+		self.channeldigitse.grid(row=0,column=1, columnspan=2,sticky=tkinter.E+tkinter.W)
+		self.channelstartlabel=ttk.Label(self.channelframe,text='Erste Kanalnummer')
 		self.channelstart=tkinter.IntVar()
 		self.channelstart.set(1)
 		self.channelstarte=ttk.Entry(self.channelframe,textvariable=self.channelstart)
-		self.channelstartlabel.grid(row=1,column=0,sticky=tkinter.E+tkinter+W)
-		self.channelstarte.grid(row=1,column=1, columnspan=2,sticky=tkinter.E+tkinter+W)
+		self.channelstartlabel.grid(row=1,column=0,sticky=tkinter.E+tkinter.W)
+		self.channelstarte.grid(row=1,column=1, columnspan=2,sticky=tkinter.E+tkinter.W)
 
 		self.convbutton=ttk.Button(self.convframe, text='Falten',command=self.convfiles)
 		self.convbutton.grid(row=6,column=0,columnspan=3,sticky=tkinter.E+tkinter.W+tkinter.S)
@@ -206,7 +206,7 @@ class CALIB_GUI:
 		if self.multichannel.get():
 			self.channelframe.grid_forget()
 		else:
-			self.channelframe.grid(row=5,column=0,columnspan=3,sticky=tkinter.E+tkinter.W+tkinter.S+tkiner.N)
+			self.channelframe.grid(row=5,column=0,columnspan=3,sticky=tkinter.E+tkinter.W+tkinter.S+tkinter.N)
 	def convfiles(self):
 		impfile=self.impfile.get()
 		path=self.filespath.get()
@@ -238,7 +238,7 @@ class CALIB_GUI:
 							else:
 								outdata[:,i]=scipy.signal.convolve(convfiledata[:,i],impdata[:,i],mode='same')
 						toSave=np.array(outdata,dtype=np.float32)
-						scipy.io.wavfile.write(os.path.join(savepath,'CONV'convfile),convfilefs,toSave)
+						scipy.io.wavfile.write(os.path.join(savepath,'CONV'+convfile),convfilefs,toSave)
 					else:
 						print('Wrong FS or CH-Count')
 			else:
@@ -261,7 +261,7 @@ class CALIB_GUI:
 							else:
 								outdata=scipy.signal.convolve(convfiledata,impdata[:,i],mode='same')
 							toSave=np.array(outdata,dtype=np.float32)
-							scipy.io.wavfile.write(os.path.join(savepath,'CONV'convfile),convfilefs,toSave)
+							scipy.io.wavfile.write(os.path.join(savepath,'CONV'+convfile),convfilefs,toSave)
 						else:
 							print('Wrong FS or CH-Count')
 
