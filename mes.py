@@ -883,7 +883,6 @@ class MES_GUI:
 		self.rawcheck.set(rawstat)
 		self.sigcheck.set(sigstat)
 		self.delay.set(str(pos))
-
 	def generateGolayIR(self):
 		if self.golaycount=='b':
 			self.respgolayb=self.average
