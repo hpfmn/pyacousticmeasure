@@ -175,7 +175,7 @@ class EVA_GUI:
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
 			f,psd = scipy.signal.periodogram(data,fs,nfft=nextpow2(len(data)))
-			psd = 20*np.log10(psd/max(psd))
+			psd = 20*np.log10(psd)#/max(psd))
 			p = subpl.semilogx(f, psd)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 			subpl.hold(True)
