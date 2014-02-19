@@ -12,6 +12,8 @@ else:
 import pysoundfile
 import os
 import os.path
+import scipy.signal
+import scipy.io.wavfile
 from numpy.fft import fft, ifft, fftshift, ifftshift
 
 
@@ -81,7 +83,7 @@ class CALIB_GUI:
 		self.fftconvlabel.grid(row=1,column=0,sticky=tkinter.E+tkinter.W)
 		self.fftconv=tkinter.IntVar()
 		self.fftconv.set(1)
-		self.fftconvcheck=ttk.Checkbutton(self.convframe, variable=self.multichannel, command=self.multichtoggle)
+		self.fftconvcheck=ttk.Checkbutton(self.convframe, variable=self.fftconv)
 		self.fftconvcheck.grid(row=1,column=1)
 
 		self.impfile=tkinter.StringVar()
@@ -120,6 +122,11 @@ class CALIB_GUI:
 		self.channelstarte=ttk.Entry(self.channelframe,textvariable=self.channelstart)
 		self.channelstartlabel.grid(row=1,column=0,sticky=tkinter.E+tkinter.W)
 		self.channelstarte.grid(row=1,column=1, columnspan=2,sticky=tkinter.E+tkinter.W)
+		self.channelafter=tkinter.StringVar()
+		self.channelafterlabel=ttk.Label(self.channelframe,text='Platzhalter nach Kanalnummer')
+		self.channelaftere=ttk.Entry(self.channelframe,textvariable=self.channelafter)
+		self.channelafterlabel.grid(row=2,column=0,sticky=tkinter.E+tkinter.W)
+		self.channelaftere.grid(row=2,column=1, columnspan=2,sticky=tkinter.E+tkinter.W)
 
 		self.convbutton=ttk.Button(self.convframe, text='Falten',command=self.convfiles)
 		self.convbutton.grid(row=6,column=0,columnspan=3,sticky=tkinter.E+tkinter.W+tkinter.S)
@@ -213,53 +220,64 @@ class CALIB_GUI:
 		prefix=self.prefix.get()
 		if (impfile!='') & (path!='') & (prefix!=''):
 			convfiles=[]
-			impwav=pysoundfile.Soundfile(impfile)
+			impwav=pysoundfile.SoundFile(impfile)
 			impch=impwav.channels
 			impfs=impwav.sample_rate
 			impdata=impwav.read(impwav.frames)
 			savepath=os.path.join(path,'Gefaltet')
+			print(savepath)
 			if not os.path.exists(savepath):
 				os.makedirs(savepath)
 			if self.multichannel.get():
 				for files in os.listdir(path):
-					if os.path.isfile(files) and (files.find(prefix)!=-1) and (files[-4:].upper == '.WAV'):
+					if os.path.isfile(os.path.join(path,files)) and (files.find(prefix)==0) and (files[-4:].upper() == '.WAV'):
 						convfiles.append(files)
+				print(convfiles)
 				for convfile in convfiles:
 					convfilepath=os.path.join(path,convfile)
-					wav=pysoundfile.Soundfile(convfilepath)
+					wav=pysoundfile.SoundFile(convfilepath)
 					convfilefs=wav.sample_rate
 					convfilech=wav.channels
 					convfiledata=wav.read(wav.frames)
 					if convfilefs==impfs and convfilech==impch:
 						outdata=np.zeros((convfiledata.shape))
-						for i in range(imch):
-							if fftconv.get():
+						for i in range(impch):
+							if self.fftconv.get():
 								outdata[:,i]=scipy.signal.fftconvolve(convfiledata[:,i],impdata[:,i],mode='same')
 							else:
 								outdata[:,i]=scipy.signal.convolve(convfiledata[:,i],impdata[:,i],mode='same')
 						toSave=np.array(outdata,dtype=np.float32)
-						scipy.io.wavfile.write(os.path.join(savepath,'CONV'+convfile),convfilefs,toSave)
+						toSaveFileName=os.path.join(savepath,'CONV'+convfile)
+						print(toSaveFileName)
+						scipy.io.wavfile.write(toSaveFileName,convfilefs,toSave)
 					else:
 						print('Wrong FS or CH-Count')
 			else:
 				for i in range(impch):
-					channelstr=int(self.channeldigits.get()-self.len(str(i+self.channelstart.get())))*'0' + str(i+self.channelstart.get())
-					chanpref=prefix+channelstr
+					convfiles=[]
+					channelstr=int(self.channeldigits.get()-len(str(i+self.channelstart.get())))*'0' + str(i+self.channelstart.get())
+					chanpref=prefix+channelstr+self.channelafter.get()
+					print('!!!!!CHANNELPREF!!!!!')
+					print(chanpref)
+					print('!!!!!CHANNELPREF!!!!!')
 					for files in os.listdir(path):
-						if os.path.isfile(files) and (files.find(chanpref)!=-1) and (files[-4:].upper == '.WAV'):
+						if os.path.isfile(os.path.join(path,files)) and (files.find(chanpref)==0) and (files[-4:].upper() == '.WAV'):
 								convfiles.append(files)
 					for convfile in convfiles:
 						convfilepath=os.path.join(path,convfile)
-						wav=pysoundfile.Soundfile(convfilepath)
+						wav=pysoundfile.SoundFile(convfilepath)
 						convfilefs=wav.sample_rate
 						convfilech=wav.channels
 						convfiledata=wav.read(wav.frames)
 						if convfilefs==impfs and convfilech==1:
 							outdata=np.zeros((convfiledata.shape))
-							if fftconv.get():
-								outdata=scipy.signal.fftconvolve(convfiledata,impdata[:,i],mode='same')
+							print(convfile)
+							print(convfiledata.shape)
+							print(impdata[:,i].shape)
+							if self.fftconv.get():
+								outdata=scipy.signal.fftconvolve(convfiledata[:,0],impdata[:,i],mode='same')
 							else:
-								outdata=scipy.signal.convolve(convfiledata,impdata[:,i],mode='same')
+								outdata=scipy.signal.convolve(convfiledata[:,0],impdata[:,i],mode='same')
 							toSave=np.array(outdata,dtype=np.float32)
 							scipy.io.wavfile.write(os.path.join(savepath,'CONV'+convfile),convfilefs,toSave)
 						else:
@@ -267,11 +285,3 @@ class CALIB_GUI:
 
 		else:
 			print('everything has to be filled out')
-
-
-
-
-
-#root = tkinter.Tk()
-#calib_gui = CALIB_GUI(root)
-#root.mainloop()
