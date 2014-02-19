@@ -804,6 +804,8 @@ class MES_GUI:
 		if int(delay)>0:
 			self.average=self.average[:,delay:len(self.signal)]
 			self.signal=self.signal[:-delay]
+		elif int(delay)==0:
+			self.average=self.average[:,:len(self.signal)]
 
 		if self.sisecb.get()=='Sweep':
 			self.generateSweepIR()
