@@ -18,6 +18,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+import matplotlib.mlab
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 import matplotlib.colors
 from numpy.fft import fft,ifft,fftshift,ifftshift
@@ -39,6 +40,7 @@ def butter_bandpass(lowcut, highcut, fs, order=5):
 def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
     b, a = butter_bandpass(lowcut, highcut, fs, order=order)
     y = scipy.signal.lfilter(b, a, data)
+    #y = scipy.signal.filtfilt(b, a, data,padlen=150)
     return y
 
 def nextpow2(i):
@@ -49,7 +51,7 @@ class EVA_GUI:
 		self.plotdata_dict={'wvplot': self.wvplot, 'psd': self.psdplot, 'spec': self.specplot, 'angle': self.angleplot, 'groupdelay': self.gd_plot, 'polar': self.polarplot,'welchpsd':self.welchplot}
 		self.plotcfg_dict={'spec': self.specplotcfg, 'polar': self.polarplotcfg,'wvplot':self.wvplotcfg,'welchpsd':self.welchplotcfg}
 
-		self.specplotvalues={'NFFT': 256,'window':'hann','noverlap':128}
+		self.specplotvalues={'NFFT': 256,'window':'hann','noverlap':128,'Logarithmisch':0}
 		self.welchplotvalues={'NFFT': 256,'window':'boxcar','noverlap':128,'padto':256}
 		self.polarplotvalues={'Radius in Grad': 360,'Frequenz': 1000}
 		self.wvplotvalues={'Linienart': '-','Zeichenmodus': 'default','Filter':0,'Startfrequenz':50,'Endfrequenz':20000,'Filterordnung':5}
@@ -171,11 +173,18 @@ class EVA_GUI:
 	def psdplot(self):
 		subpl = self.fig.add_subplot(111)
 		subpl.hold(False)
+		maximum=0
 		for i in self.fileslist.curselection():
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
 			f,psd = scipy.signal.periodogram(data,fs,nfft=nextpow2(len(data)))
-			psd = 20*np.log10(psd)#/max(psd))
+			if maximum<np.max(psd):
+				maximum=np.max(psd)
+		for i in self.fileslist.curselection():
+			fs=self.datas[self.fileslist.get(i)][0]
+			data=self.datas[self.fileslist.get(i)][1]
+			f,psd = scipy.signal.periodogram(data,fs,nfft=nextpow2(len(data)))
+			psd = 20*np.log10(psd/maximum)
 			p = subpl.semilogx(f, psd)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 			subpl.hold(True)
@@ -188,10 +197,11 @@ class EVA_GUI:
 			data=self.datas[self.fileslist.get(i)][1]
 			nfft=int(nextpow2(len(data)))
 			data_fft=fftshift(fft(data,n=nfft))
+			data_fft=data_fft[nfft/2:]
 			angle_fft=np.angle(data_fft)
 			angle_fft=np.unwrap(angle_fft)
+			#angle_fft=angle_fft[nfft/2:]
 			#angle_fft=phaseunwrap(angle_fft)
-			angle_fft=angle_fft[nfft/2:]
 			f=np.linspace(0,fs/2,nfft/2)
 			p = subpl.plot(f, angle_fft)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
@@ -203,7 +213,7 @@ class EVA_GUI:
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
 			nfft=int(nextpow2(len(data)))
-			data_fft=fftshift(fft(data,n=nfft))
+			data_fft=fft(data,n=nfft)
 			f=np.linspace(0,fs/2,nfft/2)
 			#gd=-1*(phaseunwrap(np.angle(data_fft[nfft/2:]))/(2*np.pi*f))
 			delta_f=fs/nfft
@@ -211,8 +221,10 @@ class EVA_GUI:
 			phase=np.unwrap(phase)
 			gd=np.zeros(len(phase))
 			for n in range(1,len(phase)-1):
-				gd[n]=-1*((phase[n-1]-phase[n+1])/(f[n-1]-f[n+1]))
-			p = subpl.plot(f, gd)
+				#gd[n]=-1*((phase[n+1]-phase[n-1])/((f[n+1]*2*np.pi)-(f[n-1])*2*np.pi))
+				gd[n]=-1*((phase[n+1]-phase[n-1])/((f[n+1])-(f[n-1])))
+				#gd[n]=(phase[n-1]-phase[n])/(2*np.pi*delta_f)
+			p = subpl.semilogx(f, gd)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 		self.plotcanvas.show()
 	def specplot(self):
@@ -224,12 +236,21 @@ class EVA_GUI:
 		nfft=int(self.specplotvalues['NFFT'])
 		window=scipy.signal.get_window(window=self.specplotvalues['window'],Nx=nfft)
 		noverlap=int(self.specplotvalues['noverlap'])
+		logarithmic=int(self.specplotvalues['Logarithmisch'])
 		e=1
 		for i in self.fileslist.curselection():
 			subpl = self.fig.add_subplot(elements,1,e)
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
-			subpl.specgram(data,Fs=fs,NFFT=nfft,window=window,noverlap=noverlap)
+			if logarithmic:
+				Pxx,freq,t=matplotlib.mlab.specgram(data,Fs=fs,NFFT=nfft,window=window,noverlap=noverlap)
+				Pxx[Pxx==0]=10**(-10)
+				pxxplot=10. * np.log10(Pxx)
+				#pxxplot=np.nan_to_num(pxxplot)
+				subpl.pcolormesh(t,freq,pxxplot)
+				subpl.set_yscale('symlog')
+			else:
+				Pxx,freq,t,im=	subpl.specgram(data,Fs=fs,NFFT=nfft,window=window,noverlap=noverlap)
 			e+=1
 		self.plotcanvas.show()
 	def welchplot(self):
@@ -270,11 +291,14 @@ class EVA_GUI:
 			theta[x]=np.abs(psd[find_nearest(f,freq)])
 			x+=1
 		print(theta)
-		#theta=-10*np.log10(theta/np.max(theta))
+		theta=20*np.log10(theta/np.max(theta))
+		#theta=-theta
 		#theta=theta+np.abs(np.min(theta))
 		#theta=theta+np.abs(np.min(theta))+1
 		print(theta)
 		p = subpl.plot(r,theta)
+		subpl.set_rmax(0.5)
+		subpl.set_rmin(-70)
 	#	subpl.set_rscale('log')
 		self.plotcanvas.show()
 	def plotcfg(self):
@@ -283,7 +307,8 @@ class EVA_GUI:
 		nfft=self.specplotvalues['NFFT']
 		window=self.specplotvalues['window']
 		noverlap=self.specplotvalues['noverlap']
-		cfgvalues=['Spektrogramm Konfiguration',['NFFT','e',str(nfft)],['window','cbro',window,'boxcar', 'triang', 'blackman', 'hamming', 'hann', 'bartlett', 'flattop', 'parzen', 'bohman', 'blackmanharris', 'nuttall', 'barthann'],['noverlap','e',str(noverlap)]]
+		logarithmic=self.specplotvalues['Logarithmisch']
+		cfgvalues=['Spektrogramm Konfiguration',['NFFT','e',str(nfft)],['window','cbro',window,'boxcar', 'triang', 'blackman', 'hamming', 'hann', 'bartlett', 'flattop', 'parzen', 'bohman', 'blackmanharris', 'nuttall', 'barthann'],['noverlap','e',str(noverlap)],['Logarithmisch','c',logarithmic]]
 		self.specplotvalues=cfgdlg(cfgvalues)
 		self.fig.clear()
 		self.specplot()
