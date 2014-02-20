@@ -11,6 +11,7 @@ import eva
 import calib
 
 root = tkinter.Tk()
+root.title('PyAcoustic Measure V0.1')
 
 master = ttk.Notebook(root)
 master.pack(fill=tkinter.BOTH,expand=1)

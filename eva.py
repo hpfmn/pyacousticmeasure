@@ -104,10 +104,10 @@ class EVA_GUI:
 		self.evatree.insert('','end','Amplitudengang',text='Amplitudengang',open=True)
 		self.evatree.insert('Amplitudengang','end','psd', text='Plot Periodogram')
 		self.evatree.insert('Amplitudengang','end','welchpsd', text='Plot Welch Periodogram')
-		self.evatree.insert('','end','angle', text='Plot Angle')
-		self.evatree.insert('','end','groupdelay', text='Plot Group Delay')
-		self.evatree.insert('','end','spec', text='Plot Spektogram')
-		self.evatree.insert('','end','polar', text='Polar')
+		self.evatree.insert('','end','angle', text='Plot Phasengang')
+		self.evatree.insert('','end','groupdelay', text='Plot Gruppenlaufzeit')
+		self.evatree.insert('','end','spec', text='Plot Spektrogram')
+		self.evatree.insert('','end','polar', text='Plot Polar')
 		self.evatree.selection_set('wvplot')
 		self.fileslist.bind('<<ListboxSelect>>', self.plotdata)
 		self.evatree.bind('<<TreeviewSelect>>', self.plotdata)
@@ -188,6 +188,8 @@ class EVA_GUI:
 			p = subpl.semilogx(f, psd)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 			subpl.hold(True)
+		subpl.set_ylim((-70,0.5))
+		subpl.set_xlim((20,20500))
 		self.plotcanvas.show()
 	def angleplot(self):
 		subpl = self.fig.add_subplot(111)
@@ -204,6 +206,7 @@ class EVA_GUI:
 			#angle_fft=phaseunwrap(angle_fft)
 			f=np.linspace(0,fs/2,nfft/2)
 			p = subpl.plot(f, angle_fft)
+			subpl.set_xscale('log')
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 		self.plotcanvas.show()
 	def gd_plot(self):
@@ -268,6 +271,7 @@ class EVA_GUI:
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
 			subpl.psd(data,Fs=fs,NFFT=nfft,window=window,noverlap=noverlap,pad_to=padto)
+			subpl.set_xscale('log')
 			p=subpl.get_lines()
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[-1].get_c())))
 		self.plotcanvas.show()
