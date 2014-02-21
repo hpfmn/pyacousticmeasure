@@ -252,8 +252,10 @@ class EVA_GUI:
 				#pxxplot=np.nan_to_num(pxxplot)
 				subpl.pcolormesh(t,freq,pxxplot)
 				subpl.set_yscale('symlog')
+				subpl.set_ylim((20,20500))
 			else:
 				Pxx,freq,t,im=	subpl.specgram(data,Fs=fs,NFFT=nfft,window=window,noverlap=noverlap)
+				subpl.set_ylim((20,20500))
 			e+=1
 		self.plotcanvas.show()
 	def welchplot(self):
