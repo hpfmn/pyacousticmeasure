@@ -575,6 +575,10 @@ class MES_GUI:
 					self.respgolaya=self.average
 					self.raw=[]
 					self.cursiavg=int(self.siavg.get())
+					if self.sigcheck.get():
+						sigfile=self.getSigFilename()
+						toSave=np.array(self.signal.transpose(),dtype=('float32'))
+						scipy.io.wavfile.write(sigfile,int(self.fs),toSave.transpose())
 					self.signal=self.golayb
 					if int(self.delay.get())>0:
 						self.signal=np.concatenate((self.signal,np.zeros((int(self.delay.get())))))
@@ -584,6 +588,10 @@ class MES_GUI:
 							self.MesPyAudio()
 						if(self.IsPyJack()):
 							self.MesPyJack()
+					if self.sigcheck.get():
+						sigfile=self.getSigFilename()
+						toSave=np.array(self.signal.transpose(),dtype=('float32'))
+						scipy.io.wavfile.write(sigfile,int(self.fs),toSave.transpose())
 					self.inccounter()
 			else:
 				if int(self.delay.get())>0:
@@ -593,7 +601,9 @@ class MES_GUI:
 						self.MesPyAudio()
 					if(self.IsPyJack()):
 						self.MesPyJack()
+				print(self.getSigFilename())
 				if self.sigcheck.get():
+					print('saving file')
 					sigfile=self.getSigFilename()
 					toSave=np.array(self.signal.transpose(),dtype=('float32'))
 					scipy.io.wavfile.write(sigfile,int(self.fs),toSave.transpose())

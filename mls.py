@@ -104,8 +104,8 @@ def FastHadamard(x,P1,N):
 	k1=P1
 	for k in range(0,N):
 		k2=k1/2
-		for j in range(0,k2):
-			for i in range(j,P1,k1):
+		for j in range(0,int(k2)):
+			for i in range(j,int(P1),int(k1)):
 				i1=i+k2
 				temp=x[i]+x[i1]
 				x[i1]=x[i]-x[i1]
