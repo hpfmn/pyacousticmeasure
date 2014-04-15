@@ -204,6 +204,13 @@ class MES_GUI:
 		self.sweependlabel.grid(row=5,column=0, sticky=(tkinter.W))
 		self.sweepende.grid(row=5,column=1, sticky=tkinter.E+tkinter.W)
 
+		self.sweepfadeslabel=ttk.Label(self.sweepframe, text='Sweep Ein-/Ausblenden')
+		self.sweepfades=tkinter.IntVar()
+		self.sweepfades.set(1)
+		self.sweepfadescheck=ttk.Checkbutton(self.sweepframe, variable=self.sweepfades)
+		self.sweepfadeslabel.grid(row=6,column=0, sticky=(tkinter.W))
+		self.sweepfadescheck.grid(row=6,column=1, sticky=tkinter.E+tkinter.W)
+
 		self.sweepframe.grid(row=2, column=0, columnspan=2, sticky=tkinter.N+tkinter.S+tkinter.E+tkinter.W)
 		self.sweepframe.columnconfigure(0, weight=1)
 		self.sweepframe.columnconfigure(1, weight=1)
@@ -778,6 +785,19 @@ class MES_GUI:
 				specfact=np.log2(10**(-3.0/40))
 			self.signal=generate_spectralsweep(self.fs,int(self.dursp.get()),tg_start,tg_end,int(self.f0.get()),int(self.f1.get()),specfact)
 			self.signal=10**(float(self.level.get())/20)*self.signal
+		if self.sweepfades.get():
+			start=self.sweepstart.get()
+			end=len(self.signal)-self.sweepend.get()
+			t_start=np.arange(0,(start)/self.fs,1.0/self.fs)
+			t_end=np.arange(0,(end)/self.fs,1.0/self.fs)
+			f_start=1.0/((start/self.fs)*4.0)
+			f_end=1.0/((end/self.fs)*4.0)
+			sinwin=np.sin(2*np.pi*f_start*t_start)
+			coswin=np.cos(2*np.pi*f_end*t_end)
+			self.signal[:start]=self.signal[:start]*sinwin
+			self.signal[int(self.sweepend.get()):]=self.signal[int(self.sweepend.get()):]*coswin
+
+						
 
 	def noisegen(self):
 		print('not implemented yet')
