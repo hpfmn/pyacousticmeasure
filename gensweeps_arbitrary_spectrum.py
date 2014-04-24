@@ -14,7 +14,7 @@ def generate_spectralsweep(fs,samples,tg_start,tg_end,fstart,fstop,specfact):
 	fs=float(fs)
 	#fs=48000
 	#samples=int((nextpow2(fs*3)))#3)/2)+1)
-	samples=float(samples/2)
+	samples=float(samples/2)+1
 	delta_f=fs/samples
 	#tg_start=0.1#05#2400/fs
 	#tg_end=((samples)/fs)/3
@@ -23,7 +23,7 @@ def generate_spectralsweep(fs,samples,tg_start,tg_end,fstart,fstop,specfact):
 
 	t_g=np.zeros(samples)
 	t_g[0]=tg_start
-	f=np.linspace(1,fs/2,samples)
+	f=np.linspace(0,fs/2,samples)
 	#H=f**(-0.5)
 	H=np.zeros(len(f))
 	start=find_nearest(f,fstart)

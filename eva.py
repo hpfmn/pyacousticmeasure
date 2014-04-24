@@ -332,7 +332,7 @@ class EVA_GUI:
 		bandstart=self.wvplotvalues['Startfrequenz']
 		bandstop=self.wvplotvalues['Endfrequenz']
 		filterorder=self.wvplotvalues['Filterordnung']
-		cfgvalues=['Wellenform Konfiguration',['Linienart','cbro',linestyle,'-','--','-.',':','None'],['Zeichenmodus','cbro',drawmode,'default' ,'steps' ,'steps-mid','steps-post'],['Filter','c',filteract],['Startfrequenz','e',bandstart],['Endfrequenz','e',bandstop],['Filterordnung','e',filterorder]]
+		cfgvalues=['Wellenform Konfiguration',['Linienart','cbro',linestyle,'-','--','-.',':','.','None'],['Zeichenmodus','cbro',drawmode,'default' ,'steps' ,'steps-mid','steps-post'],['Filter','c',filteract],['Startfrequenz','e',bandstart],['Endfrequenz','e',bandstop],['Filterordnung','e',filterorder]]
 		self.wvplotvalues=cfgdlg(cfgvalues)
 		self.fig.clear()
 		self.wvplot()

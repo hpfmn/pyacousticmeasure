@@ -25,6 +25,11 @@ import golay
 import mls
 from gensweeps_arbitrary_spectrum import generate_spectralsweep
 import gensweeps_arbitrary_spectrum
+import et2st2.et2st2
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+
 
 
 def nextpow2(m):
@@ -257,8 +262,8 @@ class MES_GUI:
 		self.siavgent.grid(row=6,column=1, sticky=tkinter.E+tkinter.W)
 
 		self.delaylabel = ttk.Label(self.siseframe, text='Verzögerung in Samples')
-		self.delay=tkinter.StringVar()
-		self.delay.set(str(0))
+		self.delay=tkinter.IntVar()
+		self.delay.set(0)
 		self.delaye= ttk.Entry(self.siseframe, textvariable=self.delay)
 		self.delaylabel.grid(row=7,column=0, sticky=tkinter.W+tkinter.E)
 		self.delaye.grid(row=7,column=1, sticky=tkinter.W+tkinter.E)
@@ -348,9 +353,27 @@ class MES_GUI:
 		self.openbtn=ttk.Button(self.fileframe, text="Auswählen", command=self.selectpath)
 		self.openbtn.grid(row=2,column=3, sticky=tkinter.W)
 
+		self.turntable=tkinter.IntVar()
+		self.turntable.set(0)
+		self.turntablecheck=ttk.Checkbutton(self.fileframe, text="Drehtisch", variable=self.turntable, command=self.turnchange)
+		self.turnstart=tkinter.DoubleVar()
+		self.turnstart.set(-90)
+		self.turnstarte=ttk.Entry(self.fileframe, textvariable=self.turnstart)
+		self.turnstop=tkinter.DoubleVar()
+		self.turnstop.set(90)
+		self.turnstope=ttk.Entry(self.fileframe, textvariable=self.turnstop)
+		self.turnstep=tkinter.DoubleVar()
+		self.turnstep.set(1.25)
+		self.turnstepe=ttk.Entry(self.fileframe, textvariable=self.turnstep)
+		self.turndone=True
+		
+		self.turntablecheck.grid(row=3,column=0)
+		self.turnstarte.grid(row=3,column=1)
+		self.turnstope.grid(row=3, column=2)
+		self.turnstepe.grid(row=3,column=3)
 
 		self.mesbutton = ttk.Button(self.fileframe, text='Messen', command=self.mesButtonClick)
-		self.mesbutton.grid(row=3,column=0, sticky=tkinter.W+tkinter.E)
+		self.mesbutton.grid(row=4,column=0, sticky=tkinter.W+tkinter.E)
 		self.actsweepend()
 
 
@@ -496,6 +519,8 @@ class MES_GUI:
 
 	def testButtonClick(self):
 		self.generate_signal[self.sisecb.get()]()
+		if self.delay.get()>0:
+			self.signal=np.concatenate((self.signal,np.zeros(self.delay.get())))
 		time.sleep(0.5)
 		if self.sisecb.get()=='Golay':
 			self.signal=self.golaya
@@ -521,7 +546,10 @@ class MES_GUI:
 					self.TestPyJack()
 		
 	def getImpFilename(self):
-		return self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
+		if self.turntable.get():
+			return self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.getTableCount()+'_'+'DEG_'+self.counter.get()+'.wav'
+		else:
+			return self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
 
 	def getSigFilename(self):
 		if self.sisecb.get()=='Golay':
@@ -530,9 +558,21 @@ class MES_GUI:
 			return self.filepath.get()+os.sep+self.prefix.get()+'_SIG_'+self.counter.get()+'.wav'
 	def getRawFilename(self, avg):
 		if self.sisecb.get()=='Golay':
-			return self.filepath.get()+os.sep+self.prefix.get()+'_RAW'+self.golaycount+'_'+self.counter.get()+'_AVG_'+str(avg)+'.wav'
+			if self.turntable.get():
+				return self.filepath.get()+os.sep+self.prefix.get()+'_RAW'+self.golaycount+'_'+self.getTableCount()+'_'+str(self.table.deg)+'DEG_'+self.counter.get()+'_AVG_'+str(avg)+'.wav'
+			else:
+				return self.filepath.get()+os.sep+self.prefix.get()+'_RAW'+self.golaycount+'_'+self.counter.get()+'_AVG_'+str(avg)+'.wav'
 		else:
-			return self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(avg)+'.wav'
+			if self.turntable.get():
+				return self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+self.getTableCount()+'_'+str(self.table.deg)+'DEG_'+'_AVG_'+str(avg)+'.wav'
+			else:
+				return self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(avg)+'.wav'
+	
+	def getTableCount(self):
+		start=self.turnstart.get()
+		stop=self.turnstop.get()
+		step=self.turnstep.get()
+		return str(int((abs(start-stop)/step)-(abs(self.table.deg-stop)/step))).zfill(2)
 
 	def filenotexistscheck(self):
 		filenotexists=True
@@ -559,8 +599,20 @@ class MES_GUI:
 		return filenotexists
 			
 	def mesButtonClick(self):
+		if self.turntable.get() and self.turndone and (self.table.deg<self.turnstop.get()):
+			self.table.set2deg(self.turnstart.get())
+			self.turndone=False
+			self.generate_signal[self.sisecb.get()]()
+			if self.delay.get()>0:
+				self.signal=np.concatenate((self.signal,np.zeros(self.delay.get())))
+		elif (not self.turntable.get()):
+			self.generate_signal[self.sisecb.get()]()
+			if self.delay.get()>0:
+				self.signal=np.concatenate((self.signal,np.zeros(self.delay.get())))
+			#time.sleep(2)
+		#plt.plot(self.signal)
+		#plt.show()
 		self.raw=[]
-		self.generate_signal[self.sisecb.get()]()
 		self.cursiavg=int(self.siavg.get())
 		self.golaycount='a'
 		filenotexists=self.filenotexistscheck()
@@ -571,8 +623,8 @@ class MES_GUI:
 				filenotexists=self.filenotexistscheck()
 				if filenotexists:
 					self.signal=self.golaya
-					if int(self.delay.get())>0:
-						self.signal=np.concatenate((self.signal,np.zeros((int(self.delay.get())))))
+					if self.delay.get()>0:
+						self.signal=np.concatenate((self.signal,np.zeros(self.delay.get())))
 					self.golaycount='a'
 					for i in range(int(self.siavg.get())):
 						if(self.IsPyAudio()):
@@ -587,8 +639,8 @@ class MES_GUI:
 						toSave=np.array(self.signal.transpose(),dtype=('float32'))
 						scipy.io.wavfile.write(sigfile,int(self.fs),toSave.transpose())
 					self.signal=self.golayb
-					if int(self.delay.get())>0:
-						self.signal=np.concatenate((self.signal,np.zeros((int(self.delay.get())))))
+					if self.delay.get()>0:
+						self.signal=np.concatenate((self.signal,np.zeros(self.delay.get())))
 					self.golaycount='b'
 					for i in range(int(self.siavg.get())):
 						if(self.IsPyAudio()):
@@ -599,26 +651,40 @@ class MES_GUI:
 						sigfile=self.getSigFilename()
 						toSave=np.array(self.signal.transpose(),dtype=('float32'))
 						scipy.io.wavfile.write(sigfile,int(self.fs),toSave.transpose())
-					self.inccounter()
+				#	self.inccounter()
 			else:
-				if int(self.delay.get())>0:
-					self.signal=np.concatenate((self.signal,np.zeros((int(self.delay.get())))))
 				for i in range(int(self.siavg.get())):
 					if(self.IsPyAudio()):
 						self.MesPyAudio()
 					if(self.IsPyJack()):
 						self.MesPyJack()
 				print(self.getSigFilename())
-				if self.sigcheck.get():
+				if self.sigcheck.get() and  (not self.turntable.get()):
 					print('saving file')
 					sigfile=self.getSigFilename()
 					toSave=np.array(self.signal.transpose(),dtype=('float32'))
 					scipy.io.wavfile.write(sigfile,int(self.fs),toSave.transpose())
+				#self.inccounter()
+			if self.turntable.get() and (not self.turndone) and (self.table.deg<self.turnstop.get()):
+				print(self.table.deg)
+				self.table.set2deg(self.table.deg+self.turnstep.get())
+				time.sleep(0.5)
+				if (self.table.deg>=self.turnstop.get()):
+					self.turndone=True
+				self.mesButtonClick()
+			else:
 				self.inccounter()
+			if self.turntable.get() and self.turndone and self.table.deg>=self.turnstop.get():
+				self.table.set2deg(self.turnstart.get())
+				print('saving file')
+				sigfile=self.getSigFilename()
+				toSave=np.array(self.signal.transpose(),dtype=('float32'))
+				scipy.io.wavfile.write(sigfile,int(self.fs),toSave.transpose())
 	
 	def MesPyJack(self):
 		OCHANNELS=len(self.jaoutlist.curselection())
 		ICHANNELS=len(self.jainplist.curselection())
+		print(self.jainplist.curselection())
 		self.fs = float(jack.get_sample_rate())
 		jack.activate()
 
@@ -629,7 +695,7 @@ class MES_GUI:
 		# Register and Connect Input Ports
 		for i in range(0,ICHANNELS):
 			jack.register_port('input_'+str(i), jack.IsInput)
-			jack.connect(self.jainplist.get(self.jaoutlist.curselection()[i]), 'measure:input_'+str(i))
+			jack.connect(self.jainplist.get(self.jainplist.curselection()[i]), 'measure:input_'+str(i))
 
 		N = jack.get_buffer_size()
 
@@ -653,7 +719,8 @@ class MES_GUI:
 		jack.deactivate()
 
 		if self.rawcheck.get():
-			rawfile=self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(int(self.siavg.get())-self.cursiavg)+'.wav'
+			#rawfile=self.get#self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(int(self.siavg.get())-self.cursiavg)+'.wav'
+			rawfile=self.getRawFilename(int(int(self.siavg.get())-self.cursiavg))#self.filepath.get()+os.sep+self.prefix.get()+'_RAW_'+self.counter.get()+'_AVG_'+str(int(self.siavg)-self.cursiavg)+'.wav'
 			toSave = np.array(input.transpose(),dtype=('float32'))	
 			scipy.io.wavfile.write(rawfile,int(self.fs), toSave)
 			print(rawfile+' saved')
@@ -775,7 +842,8 @@ class MES_GUI:
 			elif self.sweepmethodcb.get()=='linear':
 				method='linear'
 			self.signal=10**(float(self.level.get())/20)*scipy.signal.chirp(t,f0,t1,f1,method=method,phi=-90)
-			self.signal[self.sweepend.get():]=0
+			if not self.sweepfades.get():
+				self.signal[self.sweepend.get():]=0
 		elif self.sweepgenkindcb.get()=='Frequenzbereich':
 			tg_start=self.sweepstart.get()/2/float(self.fs)
 			tg_end=self.sweepend.get()/2/float(self.fs)
@@ -788,21 +856,45 @@ class MES_GUI:
 		if self.sweepfades.get():
 			start=self.sweepstart.get()
 			end=len(self.signal)-self.sweepend.get()
-			t_start=np.arange(0,(start)/self.fs,1.0/self.fs)
-			t_end=np.arange(0,(end)/self.fs,1.0/self.fs)
-			f_start=1.0/((start/self.fs)*4.0)
-			f_end=1.0/((end/self.fs)*4.0)
-			sinwin=np.sin(2*np.pi*f_start*t_start)
-			coswin=np.cos(2*np.pi*f_end*t_end)
-			self.signal[:start]=self.signal[:start]*sinwin
-			self.signal[int(self.sweepend.get()):]=self.signal[int(self.sweepend.get()):]*coswin
+			print(self.dursp.get())
+			print(len(self.signal))
+			print(self.sweepend.get())
+			print(start)
+			print(end)
+			if start>0:
+				t_start=np.arange(0,(start+1)/self.fs,1.0/self.fs)
+				f_start=1.0/((start/self.fs)*4.0)
+				sinwin=np.sin(2*np.pi*f_start*t_start)
+				self.signal[:len(sinwin)]=self.signal[:len(sinwin)]*sinwin
+				print('SINSTART')
+				print(sinwin[0])
+				print('SINEND')
+				print(sinwin[-1])
+			if end>0:
+				t_end=np.arange(0,(end+1)/self.fs,1.0/self.fs)
+				f_end=1.0/((end/self.fs)*4.0)
+				coswin=np.sin(2*np.pi*f_end*t_end)
+				coswin=coswin[-1::-1]
+				self.signal[-(len(coswin)):]=self.signal[-(len(coswin)):]*coswin
+				print('COSSTART')
+				print(coswin[0])
+				print('COSEND')
+				print(coswin[-1])
+				print(self.signal[-1])
+		#plt.plot(self.signal)
+		#plt.show()
 
 						
 
 	def noisegen(self):
 		print('not implemented yet')
 	def singen(self):
-		print('not implemented yet')
+		step=1.0/self.fs
+		dur = float(float(self.dursp.get())/self.fs)
+		t = np.arange(0,dur, step)
+		f = 1000
+		self.signal=np.sin(2*np.pi*t*f)
+		self.signal=10**(float(self.level.get())/20)*self.signal
 	def squaregen(self):
 		print('not implemented yet')
 	def sawtoothgen(self):
@@ -962,6 +1054,12 @@ class MES_GUI:
 		scipy.io.wavfile.write(impfile,int(self.fs),toSave)
 		raw=[]
 		imp=[]
+	def turnchange(self):
+		if self.turntable.get():
+			self.table=et2st2.et2st2.turntable('fw')
+			self.turndone=True
+		else:
+			del self.table
 	def __del__(self):
 		self.p.terminate()
 		if self.jack_running:
