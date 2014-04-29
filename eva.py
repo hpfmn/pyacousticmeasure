@@ -1,6 +1,7 @@
 # coding=utf8
 import numpy as np
 import os
+import gc
 import scipy
 import scipy.io.wavfile
 import pysoundfile
@@ -23,8 +24,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 import matplotlib.colors
 from numpy.fft import fft,ifft,fftshift,ifftshift
 from cfgdlg import cfgdlg
+from mpl_toolkits.mplot3d import Axes3D
 
-def find_nearest(array,value):
+def find_neares(array,value):
 	idx = (np.abs(array-value)).argmin()
 	return idx
 
@@ -48,7 +50,7 @@ def nextpow2(i):
 
 class EVA_GUI:
 	def __init__(self, parent):
-		self.plotdata_dict={'wvplot': self.wvplot, 'psd': self.psdplot, 'spec': self.specplot, 'angle': self.angleplot, 'groupdelay': self.gd_plot, 'polar': self.polarplot,'welchpsd':self.welchplot}
+		self.plotdata_dict={'wvplot': self.wvplot, 'psd': self.psdplot, 'spec': self.specplot, 'angle': self.angleplot, 'groupdelay': self.gd_plot, 'polar': self.polarplot,'welchpsd':self.welchplot, 'surf3d':self.surf3dplot,'surf2d': self.surf2dplot}
 		self.plotcfg_dict={'spec': self.specplotcfg, 'polar': self.polarplotcfg,'wvplot':self.wvplotcfg,'welchpsd':self.welchplotcfg}
 
 		self.specplotvalues={'NFFT': 256,'window':'hann','noverlap':128,'Logarithmisch':0}
@@ -85,16 +87,18 @@ class EVA_GUI:
 
 		# Files Frame Widgets
 		self.fileslist = tkinter.Listbox(self.filesframe,selectmode=tkinter.EXTENDED, exportselection=0)
-		self.fileslist.grid(row=0,column=0, rowspan=2, sticky=(tkinter.N, tkinter.S, tkinter.E, tkinter.W))
+		self.fileslist.grid(row=0,column=0, rowspan=3, sticky=(tkinter.N, tkinter.S, tkinter.E, tkinter.W))
 
 		self.fileslistscroll = ttk.Scrollbar(self.filesframe, orient=tkinter.VERTICAL, command=self.fileslist.yview)
-		self.fileslistscroll.grid(row=0, column=1, rowspan=2, sticky=(tkinter.N, tkinter.S, tkinter.E))
+		self.fileslistscroll.grid(row=0, column=1, rowspan=3, sticky=(tkinter.N, tkinter.S, tkinter.E))
 		self.fileslist['yscrollcommand'] = self.fileslistscroll.set
 
 		self.addbutton = ttk.Button(self.filesframe, text='+', command = self.add_measure)
 		self.addbutton.grid(row=0, column=2, sticky=(tkinter.N, tkinter.E, tkinter.S))
 		self.rembutton = ttk.Button(self.filesframe, text='-', command = self.rem_selected)
 		self.rembutton.grid(row=1, column=2, sticky=(tkinter.S, tkinter.E, tkinter.N))
+		self.chsortbutton = ttk.Button(self.filesframe, text='Kanäle sort.', command = self.chsort)
+		self.chsortbutton.grid(row=2, column=2, sticky=(tkinter.S, tkinter.E, tkinter.N))
 		
 		# Tree Frame Widgets
 
@@ -108,6 +112,8 @@ class EVA_GUI:
 		self.evatree.insert('','end','groupdelay', text='Plot Gruppenlaufzeit')
 		self.evatree.insert('','end','spec', text='Plot Spektrogram')
 		self.evatree.insert('','end','polar', text='Plot Polar')
+		self.evatree.insert('','end','surf3d', text='SurfacePlot 3D')
+		self.evatree.insert('','end','surf2d', text='SurfacePlot 2D')
 		self.evatree.selection_set('wvplot')
 		self.fileslist.bind('<<ListboxSelect>>', self.plotdata)
 		self.evatree.bind('<<TreeviewSelect>>', self.plotdata)
@@ -131,6 +137,7 @@ class EVA_GUI:
 			wav = pysoundfile.SoundFile(filename)
 			fs = wav.sample_rate
 			data = wav.read(wav.frames)
+			del wav
 			print(data.shape)
 			fname = filename[filename.rfind(os.sep)+1:]
 			for i in range(0,data.shape[1]):
@@ -142,18 +149,25 @@ class EVA_GUI:
 					name='_'+name
 				self.fileslist.insert(tkinter.END, name)
 				self.datas[name] = (fs, data[:,i])
+			gc.collect()
 
 	def rem_selected(self):
 		while () != self.fileslist.curselection():
 			element=self.fileslist.curselection()[0]
 			del self.datas[self.fileslist.get(element)]
 			self.fileslist.delete(element)
+		gc.collect()
 	def plotdata(self, event):
+		try:
+			self.subpl.close()
+		except:
+			pass
 		self.fig.clear()
+		gc.collect()
 		self.plotdata_dict[self.evatree.selection()[0]]()
 	def wvplot(self):
-		subpl = self.fig.add_subplot(111)
-		subpl.hold(False)
+		self.subpl = self.fig.add_subplot(111)
+		self.subpl.hold(False)
 		linestyle=self.wvplotvalues['Linienart']
 		drawmode=self.wvplotvalues['Zeichenmodus']
 		print(drawmode+linestyle)
@@ -166,13 +180,13 @@ class EVA_GUI:
 			fs=self.datas[self.fileslist.get(i)][0]
 			if filteract:
 				data=butter_bandpass_filter(data,bandstart,bandstop,fs,filterorder)
-			p = subpl.plot(data,ls=drawmode+linestyle)
+			p = self.subpl.plot(data,ls=drawmode+linestyle)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
-			subpl.hold(True)
+			self.subpl.hold(True)
 		self.plotcanvas.show()
 	def psdplot(self):
-		subpl = self.fig.add_subplot(111)
-		subpl.hold(False)
+		self.subpl = self.fig.add_subplot(111)
+		self.subpl.hold(False)
 		maximum=0
 		for i in self.fileslist.curselection():
 			fs=self.datas[self.fileslist.get(i)][0]
@@ -185,15 +199,15 @@ class EVA_GUI:
 			data=self.datas[self.fileslist.get(i)][1]
 			f,psd = scipy.signal.periodogram(data,fs,nfft=nextpow2(len(data)))
 			psd = 20*np.log10(psd/maximum)
-			p = subpl.semilogx(f, psd)
+			p = self.subpl.semilogx(f, psd)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
-			subpl.hold(True)
-		subpl.set_ylim((-70,0.5))
-		subpl.set_xlim((20,20500))
+			self.subpl.hold(True)
+		self.subpl.set_ylim((-70,0.5))
+		self.subpl.set_xlim((20,20500))
 		self.plotcanvas.show()
 	def angleplot(self):
-		subpl = self.fig.add_subplot(111)
-		subpl.hold(True)
+		self.subpl = self.fig.add_subplot(111)
+		self.subpl.hold(True)
 		for i in self.fileslist.curselection():
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
@@ -205,13 +219,13 @@ class EVA_GUI:
 			#angle_fft=angle_fft[nfft/2:]
 			#angle_fft=phaseunwrap(angle_fft)
 			f=np.linspace(0,fs/2,nfft/2)
-			p = subpl.plot(f, angle_fft)
-			subpl.set_xscale('log')
+			p = self.subpl.plot(f, angle_fft)
+			self.subpl.set_xscale('log')
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 		self.plotcanvas.show()
 	def gd_plot(self):
-		subpl = self.fig.add_subplot(111)
-		subpl.hold(True)
+		self.subpl = self.fig.add_subplot(111)
+		self.subpl.hold(True)
 		for i in self.fileslist.curselection():
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
@@ -227,14 +241,14 @@ class EVA_GUI:
 				#gd[n]=-1*((phase[n+1]-phase[n-1])/((f[n+1]*2*np.pi)-(f[n-1])*2*np.pi))
 				gd[n]=-1*((phase[n+1]-phase[n-1])/((f[n+1])-(f[n-1])))
 				#gd[n]=(phase[n-1]-phase[n])/(2*np.pi*delta_f)
-			p = subpl.semilogx(f, gd)
+			p = self.subpl.semilogx(f, gd)
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[0].get_c())))
 		self.plotcanvas.show()
 	def specplot(self):
 		elements=len(self.fileslist.curselection())
 		#self.fig.clear()
-		#subpl = self.fig.add_subplot(elements,1,1)
-		#subpl.hold(False)
+		#self.subpl = self.fig.add_subplot(elements,1,1)
+		#self.subpl.hold(False)
 		print(self.specplotvalues)
 		nfft=int(self.specplotvalues['NFFT'])
 		window=scipy.signal.get_window(window=self.specplotvalues['window'],Nx=nfft)
@@ -242,7 +256,7 @@ class EVA_GUI:
 		logarithmic=int(self.specplotvalues['Logarithmisch'])
 		e=1
 		for i in self.fileslist.curselection():
-			subpl = self.fig.add_subplot(elements,1,e)
+			self.subpl = self.fig.add_subplot(elements,1,e)
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
 			if logarithmic:
@@ -250,20 +264,25 @@ class EVA_GUI:
 				Pxx[Pxx==0]=10**(-10)
 				pxxplot=10. * np.log10(Pxx)
 				#pxxplot=np.nan_to_num(pxxplot)
-				subpl.pcolormesh(t,freq,pxxplot)
-				subpl.set_yscale('symlog')
-				subpl.set_ylim((20,20500))
+				self.subpl.pcolormesh(t,freq,pxxplot)
+				self.subpl.set_yscale('symlog')
+				self.subpl.set_ylim((20,20500))
 			else:
-				Pxx,freq,t,im=	subpl.specgram(data,Fs=fs,NFFT=nfft,window=window,noverlap=noverlap)
-				subpl.set_ylim((20,20500))
+				Pxx,freq,t,im=	self.subpl.specgram(data,Fs=fs,NFFT=nfft,window=window,noverlap=noverlap,cmap='CMRmap')
+				print(np.min(Pxx))
+				print(np.max(Pxx))
+				print(10*np.log10(np.min(Pxx)/np.max(Pxx)))
+				print(10*np.log10(np.max(Pxx)/np.max(Pxx)))
+				cbar=self.fig.colorbar(im)
+				self.subpl.set_ylim((20,20500))
 			e+=1
 		self.plotcanvas.show()
 	def welchplot(self):
-		subpl = self.fig.add_subplot(111)
-		subpl.hold(True)
+		self.subpl = self.fig.add_subplot(111)
+		self.subpl.hold(True)
 		elements=len(self.fileslist.curselection())
-		#subpl = self.fig.add_subplot(elements,1,1)
-		#subpl.hold(False)
+		#self.subpl = self.fig.add_subplot(elements,1,1)
+		#self.subpl.hold(False)
 		print(self.welchplotvalues)
 		nfft=int(self.welchplotvalues['NFFT'])
 		padto=int(self.welchplotvalues['padto'])
@@ -272,17 +291,17 @@ class EVA_GUI:
 		for i in self.fileslist.curselection():
 			fs=self.datas[self.fileslist.get(i)][0]
 			data=self.datas[self.fileslist.get(i)][1]
-			subpl.psd(data,Fs=fs,NFFT=nfft,window=window,noverlap=noverlap,pad_to=padto)
-			subpl.set_xscale('log')
-			p=subpl.get_lines()
+			self.subpl.psd(data,Fs=fs,NFFT=nfft,window=window,noverlap=noverlap,pad_to=padto)
+			self.subpl.set_xscale('log')
+			p=self.subpl.get_lines()
 			self.fileslist.itemconfig(i,selectforeground=matplotlib.colors.rgb2hex(cc.to_rgb(p[-1].get_c())))
 		self.plotcanvas.show()
 	def polarplot(self):
 		degree=int(self.polarplotvalues['Radius in Grad'])
 		freq=int(self.polarplotvalues['Frequenz'])
 		#self.fig.clear()
-		subpl = self.fig.add_subplot(111, polar=True)
-		subpl.hold(False)
+		self.subpl = self.fig.add_subplot(111, polar=True)
+		self.subpl.hold(False)
 		elements=len(self.fileslist.curselection())
 		print(elements)
 		plot_degree=np.radians(degree)
@@ -302,11 +321,105 @@ class EVA_GUI:
 		#theta=theta+np.abs(np.min(theta))
 		#theta=theta+np.abs(np.min(theta))+1
 		print(theta)
-		p = subpl.plot(r,theta)
-		subpl.set_rmax(0.5)
-		subpl.set_rmin(-70)
-	#	subpl.set_rscale('log')
+		p = self.subpl.plot(r,theta)
+		self.subpl.set_rmax(0.5)
+		self.subpl.set_rmin(-70)
+	#	self.subpl.set_rscale('log')
 		self.plotcanvas.show()
+	def surf3dplot(self):
+		degree=180
+		# Z = Degrees = Files
+		# X = freqz
+		# Y = magnitue/freq
+		#self.fig.clear()
+		self.subpl = self.fig.add_subplot(111,projection='3d')
+		self.subpl.hold(False)
+		elements=len(self.fileslist.curselection())
+		print(elements)
+		r = np.linspace(-degree/2,degree/2,elements)
+		magnitudes=np.zeros(((nextpow2(len(self.datas[self.fileslist.get(self.fileslist.curselection()[0])][1]))/2)+1,elements))
+		x=0
+		for i in self.fileslist.curselection():
+			fs=self.datas[self.fileslist.get(i)][0]
+			data=self.datas[self.fileslist.get(i)][1]
+			f,psd = scipy.signal.periodogram(data,fs,nfft=int(nextpow2(len(data))))
+			magnitudes[:,x]=psd
+			x+=1
+		magnitudes=20*np.log10(magnitudes/np.max(magnitudes))
+
+		smaller=100
+		smallmagnitudes=np.zeros((len(magnitudes)/smaller,x))
+		smallf=np.zeros(len(f)/smaller)
+		for i in range(1,int(len(magnitudes)/smaller)):
+			smallmagnitudes[i,:]=np.sum(magnitudes[(i-1)*smaller:i*smaller,:],axis=0)/smaller
+			smallf[i]=np.sum(f[(i-1)*smaller:i*smaller])/smaller
+
+
+		print(np.min(magnitudes))
+		print(np.max(magnitudes))
+		smallf,r=np.meshgrid(smallf,r)	
+		print(smallf.shape)
+		print(r.shape)
+		print(smallmagnitudes.shape)
+		self.subpl.set_xscale('symlog')
+		self.subpl.set_zlim3d((-60,0))
+		#self.subpl.set_ylim3d((-100,100))
+		self.subpl.set_xlim3d((20,20000))
+		self.subpl.plot_surface(X=smallf,Y=r,Z=smallmagnitudes.transpose(),cmap='spectral', antialiased=False, linewidth=0,vmin=-60,vmax=0)
+		self.plotcanvas.show()
+	def surf2dplot(self):
+		degree=180
+		# Z = Degrees = Files
+		# X = freqz
+		# Y = magnitue/freq
+		#self.fig.clear()
+		self.subpl = self.fig.add_subplot(111)
+		self.subpl.hold(False)
+		elements=len(self.fileslist.curselection())
+		print(elements)
+		r = np.linspace(-degree/2,degree/2,elements)
+		magnitudes=np.zeros(((nextpow2(len(self.datas[self.fileslist.get(self.fileslist.curselection()[0])][1]))/2)+1,elements))
+		x=0
+		for i in self.fileslist.curselection():
+			fs=self.datas[self.fileslist.get(i)][0]
+			data=self.datas[self.fileslist.get(i)][1]
+			f,psd = scipy.signal.periodogram(data,fs,nfft=int(nextpow2(len(data))))
+			magnitudes[:,x]=psd
+			x+=1
+		magnitudes=20*np.log10(magnitudes/np.max(magnitudes))
+		#pxxplot=np.nan_to_num(pxxplot)
+		#reduce number of points
+
+		smaller=1
+		i=0
+		fsmaller=[]
+		smallmagnitudes=np.array([])
+		while i+smaller<len(f):
+			fsmaller.append((1/smaller)*sum(f[i:i+smaller]))
+			if i==0:
+				smallmagnitudes=(1/smaller)*np.sum(magnitudes[i:i+smaller,:],axis=0)
+			else:
+				smallmagnitudes=np.vstack((smallmagnitudes,(1/smaller)*np.sum(magnitudes[i:i+smaller,:],axis=0)))
+			smaller*=2**(1/12)
+			i+=smaller
+
+
+		
+		im=self.subpl.pcolormesh(np.array(fsmaller),r,smallmagnitudes.transpose(),vmin=-30,vmax=0)
+		cbar=self.fig.colorbar(im)
+		self.subpl.set_xscale('symlog')
+		self.subpl.set_xlim((20,20500))
+
+		#smaller=100
+		#smallmagnitudes=np.zeros((len(magnitudes)/smaller,x))
+		#smallf=np.zeros(len(f)/smaller)
+		#for i in range(1,int(len(magnitudes)/smaller)):
+	#		smallmagnitudes[i,:]=np.sum(magnitudes[(i-1)*smaller:i*smaller,:],axis=0)/smaller
+#			smallf[i]=np.sum(f[(i-1)*smaller:i*smaller])/smaller
+
+		#self.subpl.plot_surface(X=smallf,Y=r,Z=smallmagnitudes.transpose(),cmap='spectral', antialiased=False, linewidth=0,vmin=-60,vmax=0)
+		self.plotcanvas.show()
+
 	def plotcfg(self):
 		self.plotcfg_dict[self.evatree.selection()[0]]()
 	def specplotcfg(self):
@@ -345,5 +458,36 @@ class EVA_GUI:
 		self.welchplotvalues=cfgdlg(cfgvalues)
 		self.fig.clear()
 		self.welchplot()
+	def chsort(self):
+		#get highest channel
+		highest=0
+		for i in range(self.fileslist.size()):
+			stringstart=self.fileslist.get(i).upper().find('.WAVCH')
+			if stringstart>-1:
+				ch=int(self.fileslist.get(i)[stringstart+6:])
+				print(ch)
+				if ch>highest:
+					highest=ch
+
+		#Put all channels in seperate lists
+		chanlist=[[] for k in range(highest)] # generete a list with highest elemts of sublists
+		print(chanlist)
+		for i in range(self.fileslist.size()):
+			stringstart=self.fileslist.get(i).upper().find('.WAVCH')
+			if stringstart>-1:
+				ch=int(self.fileslist.get(i)[stringstart+6:])
+				chanlist[ch-1].append(self.fileslist.get(i))
+		# delete all collected itemes
+		for i in range(len(chanlist)):
+			for j in range(len(chanlist[i])):
+				self.fileslist.delete(self.fileslist.get(0,tkinter.END).index(chanlist[i][j]))
+		# append all itmes in sorted order
+		for i in range(len(chanlist)):
+			for j in range(len(chanlist[i])):
+				self.fileslist.insert(tkinter.END,chanlist[i][j])
+
+		
+
+
 
 
