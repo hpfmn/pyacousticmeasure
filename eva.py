@@ -15,6 +15,7 @@ else:
 	import tkinter
 	import tkinter.filedialog as filedialog
 	import tkinter.ttk as ttk
+import tkinter.simpledialog as spldlg
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -103,7 +104,7 @@ class EVA_GUI:
 		# Tree Frame Widgets
 
 		self.evatree = ttk.Treeview(self.treeframe)
-		self.evatree.grid(row=0,column=0, sticky=(tkinter.N, tkinter.W, tkinter.S, tkinter.E))
+		self.evatree.grid(row=0,column=0,columnspan=3, sticky=(tkinter.N, tkinter.W, tkinter.S, tkinter.E))
 		self.evatree.insert('','end','wvplot', text='Plot Wellenform')
 		self.evatree.insert('','end','Amplitudengang',text='Amplitudengang',open=True)
 		self.evatree.insert('Amplitudengang','end','psd', text='Plot Periodogram')
@@ -118,7 +119,26 @@ class EVA_GUI:
 		self.fileslist.bind('<<ListboxSelect>>', self.plotdata)
 		self.evatree.bind('<<TreeviewSelect>>', self.plotdata)
 		self.cfgbtn=ttk.Button(self.treeframe,text='Konfigurieren',command=self.plotcfg)
-		self.cfgbtn.grid(row=1,column=0, sticky=(tkinter.N,tkinter.W,tkinter.S,tkinter.E))
+		self.cfgbtn.grid(row=1,column=0,columnspan=3, sticky=(tkinter.N,tkinter.W,tkinter.S,tkinter.E))
+
+
+		# Widgets for selection saving and loading in sidebar
+
+
+		self.selectionlist=tkinter.Listbox(self.treeframe)
+		self.selectionstate=tkinter.IntVar()
+		self.selectioncb=ttk.Checkbutton(self.treeframe, text='Speichern', variable=self.selectionstate)
+		self.selectionadd=ttk.Button(self.treeframe, text='+',command=self.seladdclick)
+		self.selectiondel=ttk.Button(self.treeframe, text='-',command=self.seldelclick)
+		self.selectionren=ttk.Button(self.treeframe, text='R',command=self.selrenclick)
+
+		self.selectionlist.grid(row=2,column=0,columnspan=3, sticky=(tkinter.N,tkinter.W,tkinter.S,tkinter.E))
+		self.selectioncb.grid(row=3,column=0,columnspan=3, sticky=(tkinter.N,tkinter.W,tkinter.S,tkinter.E))
+		self.selectionadd.grid(row=4,column=0, sticky=(tkinter.N,tkinter.W,tkinter.S,tkinter.E))
+		self.selectiondel.grid(row=4,column=1, sticky=(tkinter.N,tkinter.W,tkinter.S,tkinter.E))
+		self.selectionren.grid(row=4,column=2, sticky=(tkinter.N,tkinter.W,tkinter.S,tkinter.E))
+		self.selectionlist.bind('<<ListboxSelect>>', self.selchange)
+		self.selectiondict={}
 
 		# Plot Frame Widgets
 
@@ -485,9 +505,39 @@ class EVA_GUI:
 		for i in range(len(chanlist)):
 			for j in range(len(chanlist[i])):
 				self.fileslist.insert(tkinter.END,chanlist[i][j])
+	def seldelclick(self):
+		while () != self.selectionlist.curselection():
+			element=self.selectionlist.curselection()[0]
+			del self.selectiondict[self.selectionlist.get(element)]
+			self.selectionlist.delete(element)
+	def seladdclick(self):
+		self.selectionlist.insert(tkinter.END,'Auswahl '+str(self.selectionlist.size()+1))
+	def selrenclick(self):
+		newname=spldlg.askstring('Neuer Name','Neuer Name')
+		if newname:
+			while (newname in self.selectiondict.keys()):
+				newname+='_'
+			saveslot=self.selectionlist.get(self.selectionlist.curselection()[0])
+			selpos=self.selectionlist.get(0,tkinter.END).index(saveslot)
+			self.selectionlist.delete(selpos)
+			self.selectionlist.insert(selpos, newname)
+			self.selectiondict[newname]=self.selectiondict[saveslot]
+			del self.selectiondict[saveslot]
 
-		
-
-
-
-
+	def selchange(self,event):
+		if self.selectionstate.get():
+			#save selection
+			print('save selection')
+			saveslot=self.selectionlist.get(self.selectionlist.curselection()[0])
+			self.selectiondict[saveslot]=self.fileslist.curselection()
+			print(saveslot)
+			print(self.selectiondict[saveslot])
+		else:
+			#recall selection
+			print('load selection')
+			saveslot=self.selectionlist.get(self.selectionlist.curselection()[0])
+			if saveslot in self.selectiondict.keys():
+				self.fileslist.selection_clear(0,tkinter.END)
+				for i in self.selectiondict[saveslot]:
+					self.fileslist.selection_set(i)
+				self.plotdata('')
