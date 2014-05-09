@@ -13,11 +13,12 @@ if sys.version_info<(3,0,0):
 	import Tkinter as tkinter
 	import tkFileDialog as filedialog
 	import ttk as ttk
+	import tkSimpleDialog as spldlg
 else:
 	import tkinter
 	import tkinter.filedialog as filedialog
 	import tkinter.ttk as ttk
-import tkinter.simpledialog as spldlg
+	import tkinter.simpledialog as spldlg
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
