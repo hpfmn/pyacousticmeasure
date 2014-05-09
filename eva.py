@@ -1,6 +1,8 @@
 # coding=utf8
 import numpy as np
+import json
 import os
+import os.path
 import gc
 import scipy
 import scipy.io.wavfile
@@ -168,7 +170,7 @@ class EVA_GUI:
 				while name in list(self.datas.keys()):
 					name='_'+name
 				self.fileslist.insert(tkinter.END, name)
-				self.datas[name] = (fs, data[:,i])
+				self.datas[name] = (fs, data[:,i], filename)
 			gc.collect()
 
 	def rem_selected(self):
@@ -541,3 +543,20 @@ class EVA_GUI:
 				for i in self.selectiondict[saveslot]:
 					self.fileslist.selection_set(i)
 				self.plotdata('')
+	def shutdown(self):
+		print('eva shutdown')
+		home=os.path.expanduser('~')
+		savepath=home+os.sep+'.pyacousticmeasure'
+		if not os.path.exists(savepath):
+			os.makedirs(savepath)
+		settingsfile=open(savepath+os.sep+'eva.json','w')
+		openedfiles=[]
+		for i in self.datas.keys():
+			openedfiles.append(self.datas[i][2])
+		openedfiles=set(openedfiles)
+		openedfiles=list(openedfiles)
+		settings={
+				'openedfiles':openedfiles
+			}
+		settingsfile.write(json.dumps(settings))
+		settingsfile.close()

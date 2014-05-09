@@ -29,3 +29,4 @@ master.add(evaframe, text='Auswerten')
 master.add(calibframe, text='Kalibrieren')
 
 root.mainloop()
+evagui.shutdown()
