@@ -2,16 +2,17 @@ import parallel
 import time
 
 class turntable:
-	def __init__(self,dir,rate):
+	def __init__(self):#,dir,rate):
 		self.p=parallel.Parallel()
-		self.setdir(dir)
-		self.dir=dir
-		self.rate=rate
-		self.pulsef(self.rate*2000)
-		if (dir=='fw')
-			self.deg=248.5
-		if (dir=='bw')
-			self.deg=253
+		#self.setdir(dir)
+		#self.dir=dir
+		#self.rate=rate
+		#self.pulsef(self,self.rate*2000)
+		#if (dir=='fw'):
+		#	self.deg=248.5
+		#if (dir=='bw'):
+	#		self.deg=253
+		pass
 	def pulsef(self,f):
 		while self.p.getInBusy():
 			self.p.setData(self.p.getData() | 0b00000001)
