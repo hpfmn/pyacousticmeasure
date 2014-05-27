@@ -31,6 +31,11 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 
+def find_nearest(array,value):
+	idx = (np.abs(array-value)).argmin()
+	return idx
+
+
 
 def nextpow2(m):
 	return 2**np.ceil(np.log2(m))
@@ -957,10 +962,15 @@ class MES_GUI:
 		for i in range(0,N):
 			#imp[i,:]=np.real(fftshift(ifft(avgfft[i,:]/sigfft)))
 			imp[i,:]=np.real(ifft(avgfft[i,:]/sigfft))
+			imp[i,:]=fftshift(avgfft[:,i]/sigfft)
+			imp[i,:find_nearest(f,-20000)]=0
+			imp[i,find_nearest(f,-20):find_nearest(f,20)]=0
+			imp[i,find_nearest(f,20000):]=0
+			imp[i,:]=np.real(ifft(ifftshift(impfft)))
 		#	if max(imp[i,:])>maximum:
 		#		maximum=max(imp[i,:])
 		#imp=imp/maximum
-		imp=imp/np.max(imp)
+		#imp=imp/np.max(imp)
 		toSave=np.array(imp.transpose(), dtype=np.float32)
 		impfile=self.getImpFilename()#self.filepath.get()+os.sep+self.prefix.get()+'_IR_'+self.counter.get()+'.wav'
 		scipy.io.wavfile.write(impfile,int(self.fs),toSave)
