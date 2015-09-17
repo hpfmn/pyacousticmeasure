@@ -1,5 +1,5 @@
 # pyacousticmeasure
 
-This was my Bachelors theses project at (http://www.filmuniversitaet.de/ "hff Potsdam") (now film university potsdam)
+This was my Bachelors theses project at [hff Potsdam](http://www.filmuniversitaet.de/) (now film university potsdam)
 
-(https://johanneswegener.de/BA.pdf "Download Theses") (in german)
+[Download Theses](https://johanneswegener.de/BA.pdf) (in german)
